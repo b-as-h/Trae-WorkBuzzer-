@@ -1,0 +1,28 @@
+node_modules/
+trae-token.json
+config.json
+checkin.log
+*.log
+npm-install.log
+capture.log
+.wb-browser-profile/
+_wb_capture_state.json
+# 计划任务定义备份（含本机 SID 与绝对路径，仅供本机重建用）
+DailyCheckin.backup.xml
+# 当日签到状态（运行时产物：记录今天哪一端已签到完成，用于后续时段跳过）
+state/
+# 日志轮转存档（checkin.log.1 / .2 / …，不被上面的 *.log 覆盖）
+checkin.log.*
+# 原子写 config 的中间文件：写入中途崩溃会残留，里面是明文 token，必须忽略
+config.json.tmp
+*.json.tmp
+# 临时排查产物（_wb_capture_state.json、各类 *_test/_taskinfo 转储等）
+_*.txt
+
+# ── 本项目（面板 / WorkBuddy OAuth 模块）新增的运行时产物 ──
+panel-start.log
+wb-auth.log
+*.bak
+*.orig
+Thumbs.db
+Desktop.ini

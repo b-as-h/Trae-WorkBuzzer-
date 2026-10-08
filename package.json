@@ -1,0 +1,15 @@
+{
+  "name": "auto-checkin",
+  "version": "1.2.0",
+  "private": true,
+  "description": "Trae + WorkBuddy 每日自动签到（每天 5 次：00:01 / 09:00 / 13:00 / 17:00 / 21:00；断网时联网自动补签；隐藏窗口后台运行，当日完成后自动跳过，结果有系统通知）",
+  "scripts": {
+    "checkin": "node checkin.js",
+    "checkin:force": "node checkin.js --force",
+    "capture": "node capture-trae-token.js",
+    "install-browser": "playwright install chromium"
+  },
+  "dependencies": {
+    "playwright": "^1.64.0"
+  }
+}

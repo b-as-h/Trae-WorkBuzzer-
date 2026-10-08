@@ -1,0 +1,37 @@
+{
+  "trae": {
+    "host": "https://api.trae.cn",
+    "region": "CN",
+    "storageJson": "",
+    "cloudideStorage": "",
+    "manualToken": "",
+    "tokenFile": "trae-token.json",
+    "maxRetry": 10,
+    "minWait": 15000,
+    "maxWait": 30000,
+    "deadlineMs": 480000
+  },
+  "workbuddy": {
+    "accessToken": "",
+    "refreshToken": "",
+    "uid": "",
+    "domain": "",
+    "refreshedAt": 0,
+    "atRestSecretKey": ""
+  },
+  "networkRetry": {
+    "enabled": true,
+    "waitMs": 600000,
+    "probeIntervalMs": 20000
+  },
+  "crossDayGuard": {
+    "enabled": true,
+    "minutes": 60
+  },
+  "notify": {
+    "enabled": true,
+    "nightStart": "23:00",
+    "nightEnd": "07:00",
+    "lastSlotAfter": "21:00"
+  }
+}
