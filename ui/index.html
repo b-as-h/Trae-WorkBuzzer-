@@ -62,6 +62,9 @@
   .sw.sm{width:36px;height:20px}
   .sw.sm::after{width:14px;height:14px;top:2px;left:2px}
   .sw.sm.on::after{left:18px}
+  .cardhead{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+  .cardhead h2{margin:0}
+  button.btn.danger{color:#f6b8b8;border-color:#4d2b2b}
   pre.log{background:#0b100e;border:1px solid var(--line);border-radius:10px;padding:12px;
     max-height:230px;overflow:auto;font:12px/1.65 Consolas,"Courier New",monospace;color:#b9cdc2;
     white-space:pre-wrap;word-break:break-all;margin:0}
@@ -238,7 +241,12 @@
     </div>
 
     <div class="card" style="grid-column:1/-1">
-      <h2>最近日志</h2>
+      <div class="cardhead">
+        <h2>最近日志</h2>
+        <div class="grow"></div>
+        <button class="btn tiny" id="btnExportLog" title="下载完整 checkin.log 到本地（含全部内容，不只是最近 40 行）">导出日志</button>
+        <button class="btn tiny danger" id="btnClearLog" title="清空 checkin.log 及其轮转存档，不可恢复；建议先导出备份">清除日志</button>
+      </div>
       <pre class="log" id="log">加载中…</pre>
     </div>
   </div>
@@ -974,6 +982,28 @@ async function postHourly(enabled, hours) {
 bindEv('btnRefresh', 'click', async function () {
   await Promise.all([loadStatus(), loadLog()]);
   toast('已刷新', 'ok');
+});
+
+/* 日志导出：用隐藏 <a download> 触发浏览器下载（附件头由后端给） */
+bindEv('btnExportLog', 'click', function () {
+  const a = document.createElement('a');
+  a.href = '/api/log/export';
+  a.download = '';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  toast('已开始导出 checkin.log', 'ok');
+});
+
+/* 日志清除：二次确认后清空当前日志与全部轮转存档 */
+bindEv('btnClearLog', 'click', async function () {
+  const ok = window.confirm(
+    '将清空 checkin.log 及其全部轮转存档（checkin.log.1 / .2 / …），不可恢复。\n'
+    + '建议先点「导出日志」备份。积分统计单独存储，不受影响。\n\n确定清除？');
+  if (!ok) return;
+  const r = await postJson('/api/log/clear', {});
+  if (r && r.ok) { toast(r.message || '日志已清除', 'ok'); await loadLog(); }
+  else toast((r && r.message) || '清除失败', 'bad');
 });
 bindEv('btnCheckin', 'click', function () { doCheckin(Array.from(selected)); });
 bindEv('btnBatchCheckin', 'click', function () { doCheckin(Array.from(selected)); });

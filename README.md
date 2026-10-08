@@ -22,7 +22,7 @@
 | 自动签到 | Trae CN + WorkBuddy 每日签到领积分 |
 | 多账号 | 一个 `config.json` 管多个账号；每个账号单独开关 Trae / WorkBuddy、单独授权、单独看积分 |
 | 批量签到 | 面板勾选账号后一次提交，或 `node checkin.js --accounts id1,id2`；账号之间自动间隔（默认 1.5 秒） |
-| 本地面板 | 账号管理 / 今日状态 / 累计积分 / 定时时段 / 开机自启 / 未签到时重试 / 凭证有效期 / 日志 |
+| 本地面板 | 账号管理 / 今日状态 / 累计积分 / 定时时段 / 开机自启 / 未签到时重试 / 凭证有效期 / 日志（可一键导出、清除） |
 | 四层兜底 | 定时时段 → 断网补签 → 开机补签 → 每小时重试 |
 | 系统通知 | 成功每日一条汇总（多账号合并为一条）；失败与漏签必定提醒 |
 
@@ -263,6 +263,8 @@ checkin.log / wb-auth.log    日志
 | POST | `/api/accounts` | 账号增删改：`action = add` / `rename` / `enable` / `sides` / `trae-token` / `remove`；返回最新账号列表 |
 | POST | `/api/checkin` | 立即签到：`body.accounts = [账号ID]` 指定范围（省略 = 全部启用账号），可带 `body.force` |
 | GET | `/api/log` | 日志尾部（`?lines=N`） |
+| GET | `/api/log/export` | 下载完整 `checkin.log` 附件（文件名带时间戳；不含轮转存档） |
+| POST | `/api/log/clear` | 清除 `checkin.log` 及其全部轮转存档（不可恢复；积分历史单独存储，不受影响） |
 | POST | `/api/schedule` | 设置每日触发时段 |
 | POST | `/api/autostart` | 开机自动补签 开/关 |
 | POST | `/api/hourly` | 未签到时按间隔重试 开/关 + 间隔 |

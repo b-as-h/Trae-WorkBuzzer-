@@ -336,6 +336,19 @@ function logTail(n = 60) {
   } catch (_) { return []; }
 }
 
+// ── 日志导出 / 清除 ─────────────────────────────────────────────────────
+/** checkin.log 的全部文件：当前日志 + 轮转存档 checkin.log.1 / .2 / … */
+function logFiles() {
+  const out = [];
+  if (fs.existsSync(LOG)) out.push(LOG);
+  for (let i = 1; i <= 999; i += 1) {
+    const p = `${LOG}.${i}`;
+    if (fs.existsSync(p)) out.push(p);
+    else if (i > 1 && !fs.existsSync(`${LOG}.${i + 1}`)) break; // 连续空位后停止，避免每次扫 999 次
+  }
+  return out;
+}
+
 // ── WorkBuddy 授权（按账号） ──────────────────────────────────────────────
 const EP = 'https://www.codebuddy.cn', PREFIX = '/v2/plugin';
 let oauth = null; // { state, createdAt, accountId }
@@ -525,6 +538,35 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && p === '/api/ping') return send(res, 200, { ok: true, pid: process.pid });
     if (req.method === 'GET' && p === '/api/status') return send(res, 200, await buildStatus());
     if (req.method === 'GET' && p === '/api/log') return send(res, 200, { lines: logTail(Number(url.searchParams.get('lines') || 60)) });
+    // 导出：把完整 checkin.log 原样下载（附件名带时间戳；只含当前日志，不含轮转存档）
+    if (req.method === 'GET' && p === '/api/log/export') {
+      if (!fs.existsSync(LOG)) return send(res, 404, { ok: false, message: '日志文件不存在（可能已被清除）' });
+      const data = fs.readFileSync(LOG);
+      const d = new Date();
+      const name = `checkin-${dayKey(d)}-${pad2(d.getHours())}${pad2(d.getMinutes())}${pad2(d.getSeconds())}.log`;
+      res.writeHead(200, {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Content-Disposition': 'attachment; filename="' + name + '"',
+        'Content-Length': data.length,
+        'Cache-Control': 'no-store',
+      });
+      return res.end(data);
+    }
+    // 清除：删除当前日志及其全部轮转存档（不可恢复；积分历史存在别处，不受影响）
+    if (req.method === 'POST' && p === '/api/log/clear') {
+      await readBody(req);
+      const files = logFiles();
+      let removed = 0, bytes = 0;
+      for (const f of files) {
+        try { bytes += fs.statSync(f).size; fs.unlinkSync(f); removed += 1; } catch (_) { /* 被占用等，跳过 */ }
+      }
+      const size = bytes >= 1048576 ? (bytes / 1048576).toFixed(1) + ' MB'
+        : (bytes >= 1024 ? Math.round(bytes / 1024) + ' KB' : bytes + ' 字节');
+      return send(res, 200, {
+        ok: true, removed, bytes,
+        message: removed ? `已清除 ${removed} 个日志文件（${size}）` : '没有可清除的日志文件',
+      });
+    }
     if (req.method === 'GET' && p === '/api/accounts') return send(res, 200, { accounts: accountListOut(false) });
     if (req.method === 'POST' && p === '/api/accounts') {
       const body = await readBody(req);
