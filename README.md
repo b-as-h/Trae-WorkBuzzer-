@@ -114,6 +114,20 @@ powershell -ExecutionPolicy Bypass -File .\register-task.ps1
 
 两项必须属于**同一个账号**。填了 token 之后这个账号就**只认这个 token**，不会与本机客户端登录态按「谁有效期长」择优混用 —— 否则会拿另一个账号去签到。只填 token、设备 ID 却回落到本机客户端时，接口会持续返回 `9074`（它伪装成「高峰期 / 参与用户太多」）—— 这时脚本重试 3 次就会直接报错并说明原因，避免在批量签到时白等满 8 分钟的重试时限。填写 token 会自动打开该账号的 Trae 参与开关；两项都留空保存 = 清除手动凭证并关闭该端。
 
+**怎么拿到这两个值** —— 用配套工具 `get-trae-creds.js`（零依赖，复用本项目的解密实现）：
+
+```powershell
+node get-trae-creds.js                      # 本机客户端的 storage.json
+node get-trae-creds.js D:\copy\storage.json # 登录了该账号的机器上拷过来的 storage.json
+node get-trae-creds.js --mask               # 只看指纹，不打印 token 本体
+```
+
+输出的 token + 设备 ID 直接粘进面板该账号的「Trae 凭证」表单即可。三条注意：
+
+- **不要把本机 Trae CN 客户端换登成别的账号**去拿凭证 —— 本机登录态是「默认账号」的凭证来源，换登会把它顶掉。稳妥做法：在另一台电脑/虚拟机登录该账号后运行本工具，或把那份 `storage.json` 拷过来指定路径。
+- Cloud-IDE JWT 约 **14 天**过期，**只有该账号的客户端保持登录时才会自动续**；第二个账号的 token 到期后需要重新提取一次 —— 这是 Trae 多账号目前的固有约束（没有可用的官方刷新端点，与 WorkBuddy 的 `refreshToken` 不同）。
+- token 与设备 ID **必须来自同一份** `storage.json`（同一账号），否则接口持续返回 `9074`。
+
 > 多个账号如果都回落到同一个本机 Trae 登录态，其实还是同一个 Trae 账号：第二个账号会被跳过，并在日志里写明「与账号「x」共用同一 Trae 登录态」，不再重复打接口。
 
 ### 批量签到
@@ -157,6 +171,7 @@ powershell -ExecutionPolicy Bypass -File .\register-task.ps1
 .
 ├── checkin.js              签到主程序（零依赖）
 ├── wb-auth.js              WorkBuddy 官方插件授权流（login / refresh / ensure / status）
+├── get-trae-creds.js       从任意 storage.json 提取 Trae token + 设备 ID（多账号配套）
 ├── server.js               面板后端（node:http，仅 127.0.0.1:8795）
 ├── status.js / status.cmd  命令行状态查看（面板的 CLI 版本）
 ├── ui/

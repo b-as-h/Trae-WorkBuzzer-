@@ -10,7 +10,8 @@
     "panel": "node server.js",
     "wb-login": "node wb-auth.js login",
     "register-task": "powershell -ExecutionPolicy Bypass -File ./register-task.ps1",
-    "checkin:accounts": "node checkin.js --accounts"
+    "checkin:accounts": "node checkin.js --accounts",
+    "trae-creds": "node get-trae-creds.js"
   },
   "engines": {
     "node": ">=18"

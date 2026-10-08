@@ -50,6 +50,7 @@ Windows 计划任务，共 4 个，全部挂到同一个入口：
 | `server.js` | 面板后端：状态汇总、账号增删改、批量签到、时段/自启/重试开关、按账号的授权代理 | 仅监听 `127.0.0.1:8795`；接口不返回明文凭证；WorkBuddy 实时查询按账号缓存 60 秒 |
 | `status.js` | 命令行状态查看（面板的 CLI 版本）：按账号列今日签到、实时 WorkBuddy 状态、凭证、日志累计与按账号积分 | 零依赖 |
 | `register-task.ps1` | 注册/重建计划任务，把动作挂到 `run-hidden.vbs` | 必须保存为 **UTF-8 with BOM** |
+| `get-trae-creds.js` | 从任意 `storage.json` 提取 Trae token + 设备 ID，供多账号手工填入面板 | 零依赖；`--mask` 只打印指纹；token 与设备 ID 必须同源 |
 
 ## 关键设计决策
 
