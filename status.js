@@ -1,18 +1,19 @@
 'use strict';
 /*
- * 签到状态查看器 —— 零依赖，只读本地数据；除「按 R 立即签到」外不发任何请求
- * 显示：今日签到 / 积分统计 / 凭证有效期 / 定时任务 / 最近错误
+ * 签到状态查看器 —— 零依赖，只读本地数据；除「按 R 立即签到」与 WorkBuddy 只读状态查询外不发任何请求
+ * 显示：多账号今日签到 / 积分统计 / 凭证有效期 / 定时任务 / 最近错误
  */
 const fs = require('fs');
 const path = require('path');
 const { execFileSync, spawnSync } = require('child_process');
+const accountsLib = require('./lib/accounts.js');
+const dailyState = require('./lib/daily-state.js');
 
 const ROOT  = __dirname;
 const LOG   = path.join(ROOT, 'checkin.log');
-const STATE = path.join(ROOT, 'state', 'daily-status.json');
-const CFG   = path.join(ROOT, 'config.json');
+const CFG   = accountsLib.CONFIG_PATH;
 
-const W = 64;
+const W = 68;
 const pad2 = (n) => String(n).padStart(2, '0');
 const dayKey = (d = new Date()) => d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
 const hhmmss = (d) => pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
@@ -34,6 +35,16 @@ function dispWidth(s) {
   return w;
 }
 const L = (label, width = 22) => '   ' + label + ' '.repeat(Math.max(1, width - dispWidth(label)));
+/** 截断到指定显示宽度（超出补 …） */
+function cut(s, width) {
+  let out = '', w = 0;
+  for (const ch of String(s)) {
+    const cw = dispWidth(ch);
+    if (w + cw > width - 1) return out + '…';
+    out += ch; w += cw;
+  }
+  return out;
+}
 
 function readText(p) { try { return fs.readFileSync(p, 'utf8').replace(/^\uFEFF/, ''); } catch (_) { return ''; } }
 function readJson(p) { try { return JSON.parse(readText(p)); } catch (_) { return null; } }
@@ -46,10 +57,9 @@ function decodeJwt(t) {
 }
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';
 
-/** 实时查询 WorkBuddy 签到状态（只读接口，不领取任何东西） */
-async function wbLive() {
-  const cfg = readJson(CFG) || {};
-  const wb = cfg.workbuddy || {};
+/** 实时查询某账号的 WorkBuddy 签到状态（只读接口，不领取任何东西） */
+async function wbLive(creds) {
+  const wb = creds || {};
   if (!wb.accessToken) return null;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 8000);
@@ -81,24 +91,34 @@ function fmtExp(e) {
   return new Date(e * 1000).toLocaleString('zh-CN', { hour12: false }) + '（' + tag + '，剩 ' + d.toFixed(1) + ' 天）';
 }
 
-function parseLog() {
+/**
+ * 解析日志。多账号日志形如 `[ISO] [账号:名称] [Trae] 成功…`；
+ * 单账号（或 v1 老日志）没有账号段，归到第一个账号名下。
+ */
+function parseLog(accountList) {
   const recs = [], fails = [];
   let runs = 0;
+  const byName = new Map((accountList || []).map((a) => [a.name, a.id]));
+  const fallback = accountList && accountList.length ? accountList[0].id : 'default';
   for (const l of readText(LOG).split(/\r?\n/)) {
     const m = l.match(/^\[([0-9T:.\-Z]+)\]\s*(.*)$/);
     if (!m) continue;
     const d = new Date(m[1]), body = m[2];
     const day = isNaN(d) ? null : dayKey(d);
     if (/自动签到开始/.test(body)) { runs++; continue; }
-    if (/\[Trae\]\s*成功/.test(body)) {
-      const c = body.match(/获得积分=(\d+)/);
-      recs.push({ day, platform: 'Trae', credits: c ? Number(c[1]) : 0 });
-    } else if (/\[WorkBuddy\]\s*成功/.test(body)) {
-      const c = body.match(/"credits?"\s*:\s*(\d+)/);
-      const s = body.match(/"streak_days"\s*:\s*(\d+)/);
-      recs.push({ day, platform: 'WorkBuddy', credits: c ? Number(c[1]) : 0, streak: s ? Number(s[1]) : null });
-    } else if (/\[(Trae|WorkBuddy)\]\s*(失败|异常|跳过)/.test(body)) {
-      fails.push({ ts: isNaN(d) ? '--:--:--' : hhmmss(d), text: body.slice(0, 104) });
+    const acctM = body.match(/^\[账号:([^\]]+)\]\s*/);
+    const acctId = (acctM && byName.get(acctM[1])) || fallback;
+    const rest = acctM ? body.slice(acctM[0].length) : body;
+    if (/^\[Trae\]\s*成功/.test(rest)) {
+      const c = rest.match(/获得积分=(\d+)/);
+      recs.push({ day, platform: 'Trae', accountId: acctId, credits: c ? Number(c[1]) : 0 });
+    } else if (/^\[WorkBuddy\]\s*成功/.test(rest)) {
+      const c = rest.match(/"credits?"\s*:\s*(\d+)/);
+      const s = rest.match(/"streak_days"\s*:\s*(\d+)/);
+      recs.push({ day, platform: 'WorkBuddy', accountId: acctId, credits: c ? Number(c[1]) : 0, streak: s ? Number(s[1]) : null });
+    } else if (/^\[(Trae|WorkBuddy)\]\s*(失败|异常|跳过)/.test(rest)) {
+      // 日志里已经有 [账号:x] 前缀时不再重复拼一次账号名
+      fails.push({ ts: isNaN(d) ? '--:--:--' : hhmmss(d), text: (acctM ? body : body).slice(0, 110) });
     }
   }
   return { recs, fails, runs };
@@ -138,51 +158,76 @@ function taskInfo() {
 async function report() {
   const out = [];
   const now = new Date(), today = dayKey(now);
-  const { recs, fails, runs } = parseLog();
-  const st = readJson(STATE), cfg = readJson(CFG) || {};
+  let cfg = {};
+  try { cfg = accountsLib.readConfig(CFG); } catch (_) {}
+  const list = accountsLib.resolveAccounts(cfg);
+  const multi = list.length > 1;
+  const { recs, fails, runs } = parseLog(list);
+  const st = dailyState.loadState();
 
   out.push('');
-  out.push('  Trae / WorkBuddy 自动签到 · 状态总览');
+  out.push('  Trae / WorkBuddy 自动签到 · 状态总览' + (multi ? '（' + list.length + ' 个账号）' : ''));
   out.push('  ' + now.toLocaleString('zh-CN', { hour12: false }));
   out.push('  ' + '='.repeat(W));
 
   out.push('  【今日签到】');
-  for (const [k, name] of [['trae', 'Trae'], ['workbuddy', 'WorkBuddy']]) {
-    const r = st && st.date === today ? st[k] : null;
-    out.push(L(name) + (r && r.ok
-      ? '✅ 已完成    ' + hhmmss(new Date(r.at))
-      : '⏳ 尚未完成'));
+  const sides = ['trae', 'workbuddy'];
+  const nameW = Math.min(24, Math.max(10, ...list.map((a) => dispWidth(a.name) + 1)));
+  for (const acct of list) {
+    const parts = [];
+    for (const side of sides) {
+      const label = side === 'trae' ? 'Trae' : 'WB';
+      if (!accountsLib.sideEnabled(acct, side)) { parts.push(label + ' 未参与'); continue; }
+      const slot = dailyState.accountSlot(st, acct.id);
+      const done = dailyState.isDone(st, acct.id, side);
+      parts.push(label + (done ? ' ✅ ' + (slot && slot[side] && slot[side].at ? hhmmss(new Date(slot[side].at)) : '') : ' ⏳ 未完成'));
+    }
+    const tag = acct.enabled === false ? '（已停用）' : '';
+    out.push('   ' + cut(acct.name + tag, nameW).padEnd(nameW) + parts.join('   '));
   }
+  if (list.length === 1 && !accountsLib.sideEnabled(list[0], 'workbuddy')) out.push(L('说明') + '该账号未开启 WorkBuddy 端');
 
+  // ── 积分 ──
   const byDay = {};
+  const byAccount = {};
   for (const r of recs) {
     if (!r.day || !r.credits) continue;
-    (byDay[r.day] = byDay[r.day] || { Trae: 0, WorkBuddy: 0 })[r.platform] =
-      Math.max(byDay[r.day][r.platform], r.credits);
+    const day = (byDay[r.day] = byDay[r.day] || { Trae: 0, WorkBuddy: 0 });
+    day[r.platform] = Math.max(day[r.platform], r.credits);
+    const acc = (byAccount[r.accountId] = byAccount[r.accountId] || { Trae: 0, WorkBuddy: 0 });
+    acc[r.platform] += r.credits;
   }
   const days = Object.keys(byDay).sort();
   const totalOf = (d) => byDay[d].Trae + byDay[d].WorkBuddy;
   const sum = (a) => a.reduce((x, y) => x + y, 0);
   const last7 = sum(days.filter((d) => (now - new Date(d + 'T00:00:00')) / 86400000 < 7).map(totalOf));
-  const streak = recs.filter((r) => r.streak).slice(-1)[0];
-
-  const live = await wbLive();
 
   out.push('');
   out.push('  【积分 / 签到情况】');
-  if (live) {
-    const dc = live.daily_credit != null ? live.daily_credit : '—';
-    const tc = live.today_credit != null ? live.today_credit : '—';
-    out.push(L('WorkBuddy 今日') + (live.today_checked_in ? '已领 +' + tc : '未领') + '    每日额度 ' + dc);
-    out.push(L('WorkBuddy 连签') + (live.streak_days != null ? live.streak_days : '—') + ' 天');
-    if (Array.isArray(live.checkin_dates) && live.checkin_dates.length) {
-      out.push(L('   最近已签日期') + live.checkin_dates.slice(0, 8).join('  '));
+  const lives = await Promise.all(list.map((a) => wbLive(accountsLib.effectiveWorkbuddy(cfg, a))));
+  for (let i = 0; i < list.length; i += 1) {
+    const acct = list[i], live = lives[i];
+    if (!accountsLib.sideEnabled(acct, 'workbuddy')) continue;
+    if (live) {
+      const dc = live.daily_credit != null ? live.daily_credit : '—';
+      const tc = live.today_credit != null ? live.today_credit : '—';
+      out.push('   ' + cut(acct.name, nameW).padEnd(nameW)
+        + (live.today_checked_in ? 'WB 已领 +' + tc : 'WB 未领') + '   日额度 ' + dc
+        + '   连签 ' + (live.streak_days != null ? live.streak_days : '—') + ' 天');
+    } else if (!accountsLib.effectiveWorkbuddy(cfg, acct).accessToken) {
+      out.push('   ' + cut(acct.name, nameW).padEnd(nameW) + 'WB 未授权（尚未绑定 WorkBuddy 账号）');
+    } else {
+      out.push('   ' + cut(acct.name, nameW).padEnd(nameW) + 'WB 实时查询失败（离线数据见下方日志累计）');
     }
-  } else {
-    out.push(L('WorkBuddy') + '实时查询失败（离线数据：' + (byDay[today] ? byDay[today].WorkBuddy : 0) + ' 积分）');
   }
-  out.push(L('Trae 今日') + (byDay[today] && byDay[today].Trae ? '已领 +' + byDay[today].Trae : '已领取'));
-  out.push(L('日志累计') + sum(days.map(totalOf)) + ' 积分（' + days.length + ' 天有记录，仅含日志可解析的数额）');
+  out.push(L('日志累计') + sum(days.map(totalOf)) + ' 积分（' + days.length + ' 天；近 7 天 ' + last7 + '）');
+  if (multi) {
+    for (const acct of list) {
+      const c = byAccount[acct.id];
+      if (!c) continue;
+      out.push(L('  ' + cut(acct.name, 20), 24) + 'Trae +' + c.Trae + '  WB +' + c.WorkBuddy + '  合计 ' + (c.Trae + c.WorkBuddy));
+    }
+  }
 
   if (days.length) {
     out.push('');
@@ -195,21 +240,34 @@ async function report() {
     }
   }
 
+  // ── 凭证 ──
   out.push('');
   out.push('  【登录凭证】');
-  try {
-    const ti = require('./lib/trae.js').resolveTokenInfo();
-    if (ti && ti.exp) {
-      out.push(L('Trae') + fmtExp(ti.exp));
-      if (daysUntil(ti.exp) <= 3) out.push('      ⚠ 打开一次 Trae CN 客户端即可自动续期');
-    } else out.push(L('Trae') + '未找到（请登录 Trae CN 客户端）');
-  } catch (e) { out.push(L('Trae') + '读取失败：' + e.message.slice(0, 40)); }
-
-  const wb = cfg.workbuddy && cfg.workbuddy.accessToken;
-  if (wb) {
-    const p = decodeJwt(wb);
-    out.push(L('WorkBuddy') + (p && p.exp ? fmtExp(p.exp) : '有效'));
-  } else out.push(L('WorkBuddy') + '未配置 —— 需先登录一次');
+  for (const acct of list) {
+    out.push('   ' + cut(acct.name, nameW).padEnd(nameW) + (acct.enabled === false ? '（已停用）' : ''));
+    if (accountsLib.sideEnabled(acct, 'trae')) {
+      try {
+        const ti = require('./lib/trae.js').resolveTokenInfo(accountsLib.effectiveTrae(cfg, acct));
+        if (ti && ti.exp) {
+          out.push('      ' + 'Trae      '.padEnd(12) + fmtExp(ti.exp) + '   [' + ti.source + ']');
+          if (daysUntil(ti.exp) <= 3) out.push('      ' + ' '.repeat(12) + '⚠ 打开一次 Trae CN 客户端即可自动续期');
+        } else {
+          out.push('      ' + 'Trae      '.padEnd(12) + '未找到（请登录 Trae CN 客户端，或在该账号填写 token + 设备 ID）');
+        }
+      } catch (e) { out.push('      ' + 'Trae      '.padEnd(12) + '读取失败：' + e.message.slice(0, 40)); }
+    } else {
+      out.push('      ' + 'Trae      '.padEnd(12) + '未参与签到');
+    }
+    const wb = accountsLib.effectiveWorkbuddy(cfg, acct);
+    if (!accountsLib.sideEnabled(acct, 'workbuddy')) {
+      out.push('      ' + 'WorkBuddy '.padEnd(12) + '未参与签到');
+    } else if (wb.accessToken) {
+      const p = decodeJwt(wb.accessToken);
+      out.push('      ' + 'WorkBuddy '.padEnd(12) + (p && p.exp ? fmtExp(p.exp) : '有效') + '   uid ' + (wb.uid || '未知'));
+    } else {
+      out.push('      ' + 'WorkBuddy '.padEnd(12) + '未授权 —— 面板「账号管理」里点授权，或 node wb-auth.js login --account ' + acct.id);
+    }
+  }
 
   out.push('');
   out.push('  【定时任务】');
@@ -232,6 +290,7 @@ async function report() {
   out.push('');
   out.push('  【运行信息】');
   out.push(L('项目目录') + ROOT);
+  out.push(L('账号数') + list.length + (multi ? '（面板「账号管理」可增删）' : '（旧版单账号配置，ID=' + list[0].id + '）'));
   out.push(L('累计执行轮次') + runs + ' 次');
   out.push(L('日志') + 'checkin.log（' + (readText(LOG).length / 1024).toFixed(1) + ' KB）');
   out.push('  ' + '='.repeat(W));
@@ -250,12 +309,12 @@ function waitKey() {
 
 async function interactive() {
   for (;;) {
-    process.stdout.write('   [R] 立即签到一次      [N] 退出   ');
+    process.stdout.write('   [R] 立即签到一次（全部启用账号）      [N] 退出   ');
     const k = (await waitKey()).toLowerCase();
     process.stdout.write('\n');
     if (k === '\u0003' || k === 'n' || k === 'q') break;
     if (k !== 'r') continue;
-    console.log('\n   正在签到，请稍候（最长约 8 分钟）...\n');
+    console.log('\n   正在签到，请稍候（按账号顺序执行，最长约 20 分钟）...\n');
     const r = spawnSync(process.execPath, [path.join(ROOT, 'checkin.js')], { stdio: 'inherit', cwd: ROOT });
     console.log('\n   本次执行结束（退出码 ' + r.status + '）。按任意键刷新状态...');
     await waitKey();

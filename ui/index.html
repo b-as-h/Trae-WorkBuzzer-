@@ -23,9 +23,9 @@
   .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 18px 16px}
   .card h2{font-size:13px;margin:0 0 14px;font-weight:600;color:var(--dim);letter-spacing:.06em}
-  .row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 0}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 0;flex-wrap:wrap}
   .row+.row{border-top:1px dashed var(--line)}
-  .name{display:flex;align-items:center;gap:9px}
+  .name{display:flex;align-items:center;gap:9px;min-width:0}
   .dot{width:9px;height:9px;border-radius:50%;flex:none;background:#3d4d45}
   .dot.ok{background:var(--accent);box-shadow:0 0 0 3px rgba(34,197,94,.15)}
   .dot.no{background:#546357}
@@ -44,16 +44,24 @@
   button.btn.primary{background:linear-gradient(180deg,#22c55e,#16a34a);border-color:#16a34a;color:#06140c;font-weight:600}
   button.btn.primary:hover{filter:brightness(1.08)}
   button.btn:disabled{opacity:.45;cursor:not-allowed}
+  button.btn.tiny{padding:5px 10px;font-size:12px;border-radius:8px}
+  button.btn.danger:hover{color:var(--bad);border-color:var(--bad)}
   input[type=time],select{background:var(--card2);border:1px solid var(--line);color:var(--fg);
     border-radius:9px;padding:7px 9px;font-family:inherit;font-size:13px}
+  input[type=text],input[type=password]{width:100%;background:var(--card2);border:1px solid var(--line);color:var(--fg);
+    border-radius:9px;padding:7px 9px;font-family:inherit;font-size:13px}
+  input[type=text]:focus,input[type=password]:focus{outline:none;border-color:var(--accent2)}
   select{cursor:pointer}
   .toggle{display:flex;align-items:center;gap:11px;cursor:pointer;user-select:none}
   .sw{width:44px;height:25px;border-radius:99px;background:#2b3a32;border:1px solid var(--line);
-    position:relative;transition:.18s;flex:none}
+    position:relative;transition:.18s;flex:none;display:inline-block}
   .sw::after{content:"";position:absolute;top:2px;left:2px;width:19px;height:19px;border-radius:50%;
     background:#8ea79a;transition:.18s}
   .sw.on{background:rgba(34,197,94,.28);border-color:var(--accent2)}
   .sw.on::after{left:21px;background:var(--accent)}
+  .sw.sm{width:36px;height:20px}
+  .sw.sm::after{width:14px;height:14px;top:2px;left:2px}
+  .sw.sm.on::after{left:18px}
   pre.log{background:#0b100e;border:1px solid var(--line);border-radius:10px;padding:12px;
     max-height:230px;overflow:auto;font:12px/1.65 Consolas,"Courier New",monospace;color:#b9cdc2;
     white-space:pre-wrap;word-break:break-all;margin:0}
@@ -68,6 +76,38 @@
   .spin{display:inline-block;width:12px;height:12px;border:2px solid #3d4d45;border-top-color:var(--accent);
     border-radius:50%;animation:sp .7s linear infinite;vertical-align:-1px;margin-right:7px}
   @keyframes sp{to{transform:rotate(360deg)}}
+
+  /* ---- 账号管理 ---- */
+  .acctools{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .chk{display:flex;align-items:center;gap:7px;cursor:pointer;user-select:none;font-size:13px;color:var(--dim)}
+  .chk input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;margin:0}
+  .hintline{font-size:12.5px;color:var(--dim);margin:9px 0 12px;overflow-wrap:anywhere}
+  .empty{padding:6px 2px}
+  .acc{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:11px 12px;border:1px solid var(--line);
+    border-radius:11px;background:var(--card2);margin-bottom:10px;transition:opacity .15s}
+  .acc.off{opacity:.5}
+  .acc .pick{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex:none;margin:0}
+  .acc .nm{display:flex;align-items:center;gap:8px;min-width:150px;max-width:280px}
+  .acc .nm b{display:block;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tag{font-size:11px;color:var(--dim);border:1px solid var(--line);border-radius:6px;padding:1px 6px;flex:none}
+  .cell{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--dim);white-space:nowrap}
+  .cell .ok{color:var(--accent)}
+  .cell .no{color:var(--dim)}
+  .seg{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .side{display:flex;align-items:center;gap:7px;cursor:pointer;user-select:none;font-size:12.5px;color:var(--dim);
+    border-radius:8px;padding:2px 4px;outline:none}
+  .side:focus-visible{box-shadow:0 0 0 2px rgba(34,197,94,.5)}
+  .creds{display:flex;flex-direction:column;gap:2px;font-size:12.5px;color:var(--dim);min-width:180px;max-width:330px}
+  .creds .citem{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .acts{margin-left:auto;display:flex;gap:7px;flex-wrap:wrap}
+  .credform{flex-basis:100%;width:100%;border:1px dashed var(--line);border-radius:10px;background:var(--card);
+    padding:12px;display:none;margin-top:2px}
+  .credform.show{display:block}
+  .grid2{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+  .f label{display:block;font-size:12px;color:var(--dim);margin-bottom:5px}
+  .credrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .credtext{text-align:right;max-width:62%;overflow-wrap:anywhere}
+  .wraprowok{display:flex;flex-wrap:wrap;gap:6px;align-items:baseline;justify-content:space-between}
 </style>
 </head>
 <body>
@@ -86,13 +126,20 @@
   <div class="grid">
     <div class="card">
       <h2>今日签到状态</h2>
-      <div class="row">
+      <div class="row" id="rowTrae">
         <div class="name"><span class="dot" id="dTrae"></span><b>Trae</b></div>
         <div class="muted" id="sTrae">—</div>
       </div>
-      <div class="row">
+      <div class="row" id="rowWb">
         <div class="name"><span class="dot" id="dWb"></span><b>WorkBuddy</b></div>
         <div class="muted" id="sWb">—</div>
+      </div>
+      <div id="rowTodaySum" style="display:none">
+        <div class="row">
+          <div class="name"><span class="dot" id="dSum"></span><b id="todaySummary">—</b></div>
+          <div class="muted" id="todayRatio">—</div>
+        </div>
+        <div class="muted" id="todayMiss" style="margin-top:8px;line-height:1.75;overflow-wrap:anywhere"></div>
       </div>
       <div class="row" id="rowStreak" style="display:none">
         <div class="muted">WorkBuddy 连续签到</div>
@@ -106,6 +153,14 @@
       <div class="row"><div class="muted">WorkBuddy</div><div id="cWb" class="muted">—</div></div>
       <div class="row"><div class="muted">Trae</div><div id="cTrae" class="muted">—</div></div>
       <div class="row"><div class="muted">有记录天数</div><div id="cDays" class="muted">—</div></div>
+      <div class="row" id="rowByAcc" style="display:none">
+        <div class="muted">按账号合计</div>
+        <div id="cByAcc" class="muted" style="text-align:right;max-width:62%;overflow-wrap:anywhere">—</div>
+      </div>
+      <div class="row" id="rowRecent" style="display:none">
+        <div class="muted">最近记录</div>
+        <div id="cRecent" class="muted" style="text-align:right;max-width:62%;overflow-wrap:anywhere">—</div>
+      </div>
     </div>
 
     <div class="card">
@@ -156,22 +211,30 @@
 
     <div class="card">
       <h2>登录 / 凭证</h2>
-      <div class="row">
-        <div class="name"><span class="dot" id="dTraeTok"></span><b>Trae</b></div>
-        <div class="muted" id="sTraeTok">—</div>
-      </div>
-      <div class="row">
-        <div class="name"><span class="dot" id="dWbTok"></span><b>WorkBuddy</b></div>
-        <div class="muted" id="sWbTok">—</div>
-      </div>
+      <div id="credsList"></div>
       <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn primary" id="btnWbLogin">WorkBuddy 登录授权</button>
       </div>
       <div class="auth" id="authBox">
-        <div>请在浏览器打开下面的链接并确认授权（10 分钟内有效）：</div>
-        <div style="margin:8px 0"><a id="authUrl" href="#" target="_blank"></a></div>
+        <div class="muted" id="authWho">正在授权…</div>
+        <div style="margin-top:6px">请在浏览器打开下面的链接并确认授权（10 分钟内有效）：</div>
+        <div style="margin:8px 0"><a id="authUrl" href="#" target="_blank" rel="noopener"></a></div>
         <div class="muted" id="authState"><span class="spin"></span>等待授权中…</div>
       </div>
+    </div>
+
+    <div class="card" style="grid-column:1/-1">
+      <h2>账号管理</h2>
+      <div class="acctools">
+        <button class="btn" id="btnAddAccount">添加账号</button>
+        <div class="grow"></div>
+        <label class="chk" for="chkAllAccounts" title="全选 / 全不选（仅影响批量签到范围）">
+          <input type="checkbox" id="chkAllAccounts"> 全选 / 全不选
+        </label>
+        <button class="btn primary" id="btnBatchCheckin" disabled>批量签到（选中 0 个）</button>
+      </div>
+      <div class="hintline" id="batchHint">未选择账号将签到全部启用账号</div>
+      <div id="accList"></div>
     </div>
 
     <div class="card" style="grid-column:1/-1">
@@ -186,163 +249,787 @@
 const $ = (id) => document.getElementById(id);
 let scheduledTimes = [];
 let pollTimer = null;
+let authPollDeadline = 0;
+let accounts = [];
+let selected = new Set();
+let knownIds = new Set();
+let busy = false;
+let credEditor = null;      // { id, token, deviceId } | null
+let checkingNames = null;   // string[] | null
+let lastStatusOk = false;
+let status = null;
 
+/* ---------- 基础工具 ---------- */
 function toast(msg, kind) {
-  const t = $('toast'); t.textContent = msg; t.className = 'toast show ' + (kind || '');
+  const t = $('toast'); if (!t) return;
+  t.textContent = msg; t.className = 'toast show ' + (kind || '');
   clearTimeout(t._h); t._h = setTimeout(() => { t.className = 'toast ' + (kind || ''); }, 3600);
 }
-const fmtTime = (iso) => { if (!iso) return '—'; const d = new Date(iso);
-  return isNaN(d) ? '—' : d.toLocaleString('zh-CN', { hour12: false }); };
-const fmtExp = (c, label) => {
-  if (!c) return '未配置';
-  if (c.daysLeft == null) return '已配置（无到期信息）';
-  const d = c.daysLeft;
-  const tag = d <= 0 ? '已过期' : (d < 3 ? '即将过期' : '有效');
-  return tag + '，剩 ' + d.toFixed(1) + ' 天';
+function bindEv(id, type, fn) { const e = $(id); if (e) e.addEventListener(type, fn); }
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined && text !== null) e.textContent = String(text);
+  return e;
+}
+const obj = (v) => (v && typeof v === 'object') ? v : {};
+const arr = (v) => Array.isArray(v) ? v : [];
+const num = (v) => (typeof v === 'number' && isFinite(v)) ? v : 0;
+const fmtTime = (iso) => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? '—' : d.toLocaleString('zh-CN', { hour12: false });
 };
-
-async function loadStatus() {
-  const r = await fetch('/api/status').then(x => x.json()).catch(() => null);
-  if (!r) { toast('无法连接后端', 'bad'); return; }
-  $('sub').textContent = '更新于 ' + fmtTime(r.now) + (r.busy ? ' · 签到进行中…' : '');
-
-  const t = r.today.trae, w = r.today.workbuddy;
-  $('dTrae').className = 'dot ' + (t.ok ? 'ok' : 'no');
-  $('sTrae').textContent = t.ok ? '已完成 ' + fmtTime(t.at) : '尚未完成';
-  $('dWb').className = 'dot ' + (w.ok ? 'ok' : 'no');
-  $('sWb').textContent = w.ok ? '已完成 ' + fmtTime(w.at) : '尚未完成';
-
-  const lv = r.workbuddyLive;
-  if (lv && lv.streakDays != null) { $('rowStreak').style.display = ''; $('sStreak').textContent = lv.streakDays + ' 天'; }
-  else $('rowStreak').style.display = 'none';
-
-  const c = r.credits;
-  $('cTotal').innerHTML = (c.total || 0) + '<span>积分</span>';
-  $('cWb').textContent = (c.workbuddy || 0) + ' 积分';
-  $('cTrae').textContent = (c.trae || 0) + ' 积分';
-  $('cDays').textContent = (c.days || 0) + ' 天';
-
-  scheduledTimes = (r.schedule.times || []).slice();
-  renderChips();
-  $('schedInfo').textContent = '任务 ' + r.schedule.state + (r.schedule.next ? ' · 下次 ' + r.schedule.next : '')
-    + (r.schedule.netTask ? ' · 断网补签已启用' : '');
-
-  $('swAuto').className = 'sw' + (r.autostart ? ' on' : '');
-  $('sAuto').textContent = r.autostart ? '已启用' : '未启用';
-
-  const rr = r.hourly || {};
-  $('swHour').className = 'sw' + (rr.enabled ? ' on' : '');
-  if (document.activeElement !== $('selHour')) $('selHour').value = String(rr.hours || 1);
-  const bothDone = t.ok && w.ok;
-  $('sHour').textContent = rr.enabled
-    ? ('已启用 · 每 ' + (rr.label || (rr.hours + ' 小时')) + ' 尝试一次'
-       + (rr.next ? ' · 下次 ' + rr.next : '')
-       + (bothDone ? '（今日已完成，会静默跳过）' : '（今日未完成，会继续重试）'))
-    : '未启用';
-
-  const ct = r.creds.trae, cw = r.creds.workbuddy;
-  $('dTraeTok').className = 'dot ' + (ct ? 'ok' : 'no');
-  $('sTraeTok').textContent = ct ? fmtExp(ct) + '（读取本机 Trae CN 客户端）' : '未找到，请先登录 Trae CN 客户端';
-  $('dWbTok').className = 'dot ' + (cw ? 'ok' : 'no');
-  $('sWbTok').textContent = cw ? fmtExp(cw) + (cw.hasRefresh ? '（可自动续期）' : '') : '未登录，请点击下方按钮授权';
-  $('btnWbLogin').textContent = cw ? '重新授权' : 'WorkBuddy 登录授权';
+const hasCred = (c) => !!(c && typeof c === 'object' && (c.configured === true || Object.keys(c).length > 0));
+const shortUid = (u) => {
+  const s = String(u === undefined || u === null ? '' : u);
+  return s.length > 12 ? s.slice(0, 6) + '…' + s.slice(-4) : s;
+};
+async function getJson(url) {
+  try {
+    const x = await fetch(url, { cache: 'no-store' });
+    if (!x.ok) return null;
+    return await x.json();
+  } catch (e) { return null; }
+}
+async function postJson(url, body) {
+  try {
+    const x = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {})
+    });
+    if (!x.ok) return null;
+    return await x.json();
+  } catch (e) { return null; }
 }
 
+/* ---------- 凭证文案 ---------- */
+function daysText(c) {
+  const o = obj(c);
+  if (o.daysLeft === undefined || o.daysLeft === null) {
+    return (o.exp === undefined || o.exp === null) ? '无到期信息' : '有到期信息，天数未知';
+  }
+  const d = Number(o.daysLeft);
+  if (!isFinite(d)) return '剩余天数未知';
+  if (d <= 0) return '已过期';
+  if (d < 3) return '即将过期，剩 ' + d.toFixed(1) + ' 天';
+  return '剩 ' + d.toFixed(1) + ' 天';
+}
+function traeCredText(c) {
+  if (!hasCred(c)) return '未配置，走本机客户端';
+  const o = obj(c);
+  const src = o.source ? String(o.source) : (o.manual ? '手动配置' : '本机客户端');
+  return src + ' · ' + daysText(o);
+}
+function wbCredText(c) {
+  if (!hasCred(c)) return '未授权';
+  const o = obj(c);
+  let s = daysText(o);
+  if (o.uid) s += ' · uid ' + shortUid(o.uid);
+  if (o.hasRefresh) s += ' · 可续期';
+  return s;
+}
+function traeCredFull(c) {
+  if (!hasCred(c)) return '未配置（走本机 Trae CN 客户端）';
+  const o = obj(c);
+  const src = o.source ? String(o.source) : (o.manual ? '手动配置' : '本机 Trae CN 客户端');
+  let s = daysText(o) + ' · 来源：' + src;
+  if (o.deviceId) s += ' · 设备 ' + shortUid(o.deviceId);
+  return s;
+}
+function wbCredFull(c) {
+  if (!hasCred(c)) return '未授权（可在「账号管理」中点击授权）';
+  const o = obj(c);
+  let s = daysText(o);
+  if (o.uid) s += ' · uid ' + String(o.uid);
+  if (o.domain) s += ' · ' + String(o.domain);
+  s += o.hasRefresh ? '（可自动续期）' : '（无续期凭证）';
+  return s;
+}
+
+/* ---------- 勾选状态 ---------- */
+function syncSelection(list) {
+  const ids = [];
+  const idSet = new Set();
+  list.forEach((a) => {
+    const id = obj(a).id;
+    if (typeof id === 'string' && id && !idSet.has(id)) { idSet.add(id); ids.push(id); }
+  });
+  Array.from(selected).forEach((id) => { if (!idSet.has(id)) selected.delete(id); });
+  ids.forEach((id) => { if (!knownIds.has(id)) selected.add(id); }); // 新账号默认勾选
+  knownIds = idSet;
+}
+function applyAccounts(list) {
+  if (Array.isArray(list)) { accounts = list; syncSelection(list); }
+  renderAccounts();
+}
+
+/* ---------- 今日完成判定 ---------- */
+function sideOn(sides, key) {
+  const s = obj(sides);
+  return s[key] === undefined || s[key] === null ? true : s[key] !== false;
+}
+function isAccDone(a) {
+  const o = obj(a);
+  const t = obj(obj(o.today).trae).ok === true;
+  const w = obj(obj(o.today).workbuddy).ok === true;
+  const needT = sideOn(o.sides, 'trae');
+  const needW = sideOn(o.sides, 'workbuddy');
+  if (!needT && !needW) return true;
+  return (!needT || t) && (!needW || w);
+}
+
+/* ---------- 状态渲染 ---------- */
+function render(r) {
+  status = r;
+  const list = arr(r.accounts);
+  accounts = list;
+  syncSelection(list);
+  busy = r.busy === true;
+  const sub = $('sub');
+  if (sub) {
+    sub.textContent = '更新于 ' + fmtTime(r.now)
+      + (list.length ? ' · ' + list.length + ' 个账号' : '')
+      + (busy ? ' · 签到进行中…' : '');
+  }
+  renderToday(r, list);
+  renderCredits(r, list);
+  renderSchedule(r);
+  renderToggles(r);
+  renderCredsCard(r, list);
+  renderAccounts();
+}
+
+function setDot(node, ok) { if (node) node.className = 'dot ' + (ok ? 'ok' : 'no'); }
+
+function renderToday(r, list) {
+  const multi = list.length > 1;
+  const rowTrae = $('rowTrae'), rowWb = $('rowWb'), sumBox = $('rowTodaySum');
+  if (rowTrae) rowTrae.style.display = multi ? 'none' : '';
+  if (rowWb) rowWb.style.display = multi ? 'none' : '';
+  if (sumBox) sumBox.style.display = multi ? '' : 'none';
+
+  const t = obj(obj(r.today).trae);
+  const w = obj(obj(r.today).workbuddy);
+  if (!multi) {
+    setDot($('dTrae'), t.ok === true);
+    const sT = $('sTrae'); if (sT) sT.textContent = t.ok === true ? '已完成 ' + fmtTime(t.at) : '尚未完成';
+    setDot($('dWb'), w.ok === true);
+    const sW = $('sWb'); if (sW) sW.textContent = w.ok === true ? '已完成 ' + fmtTime(w.at) : '尚未完成';
+  } else {
+    const total = (typeof r.accountCount === 'number' && r.accountCount >= 0) ? r.accountCount : list.length;
+    const done = (typeof r.doneCount === 'number' && r.doneCount >= 0)
+      ? r.doneCount : list.filter(isAccDone).length;
+    const allDone = total > 0 && done >= total;
+    setDot($('dSum'), allDone);
+    const s = $('todaySummary');
+    if (s) s.textContent = '已完成 ' + done + '/' + total + ' 个账号';
+    const ratio = $('todayRatio');
+    if (ratio) ratio.textContent = allDone ? '全部完成 ✅' : (total - done) + ' 个待完成';
+    const miss = list.filter((a) => a.enabled !== false && !isAccDone(a)).map((a) => a.name || a.id);
+    const m = $('todayMiss');
+    if (m) m.textContent = miss.length ? ('未完成账号：' + miss.join('、')) : '所有启用账号今日均已完成 ✅';
+  }
+
+  const lv = obj(r.workbuddyLive);
+  const streakRow = $('rowStreak');
+  if (lv.streakDays !== undefined && lv.streakDays !== null) {
+    if (streakRow) streakRow.style.display = '';
+    const sS = $('sStreak'); if (sS) sS.textContent = lv.streakDays + ' 天';
+  } else if (streakRow) {
+    streakRow.style.display = 'none';
+  }
+}
+
+function renderCredits(r, list) {
+  const c = obj(r.credits);
+  const total = $('cTotal'); if (total) total.innerHTML = num(c.total) + '<span>积分</span>';
+  const cw = $('cWb'); if (cw) cw.textContent = num(c.workbuddy) + ' 积分';
+  const ct = $('cTrae'); if (ct) ct.textContent = num(c.trae) + ' 积分';
+  const cd = $('cDays'); if (cd) cd.textContent = num(c.days) + ' 天';
+
+  const recent = arr(c.recent);
+  const rrow = $('rowRecent'), rc = $('cRecent');
+  if (rrow && rc) {
+    if (recent.length) {
+      rrow.style.display = '';
+      rc.textContent = recent.slice(-6).map((d) => {
+        const o = obj(d);
+        const day = o.date ? String(o.date).slice(5) : '?';
+        return day + ' T' + num(o.trae) + '/W' + num(o.workbuddy);
+      }).join(' · ');
+    } else {
+      rrow.style.display = 'none';
+    }
+  }
+
+  const brow = $('rowByAcc'), bc = $('cByAcc');
+  if (brow && bc) {
+    if (list.length > 1) {
+      brow.style.display = '';
+      bc.textContent = list.map((a) => {
+        const ac = obj(a.credits);
+        return (a.name || a.id) + ' ' + num(ac.total);
+      }).join(' · ');
+    } else {
+      brow.style.display = 'none';
+    }
+  }
+}
+
+function renderSchedule(r) {
+  const sc = obj(r.schedule);
+  scheduledTimes = arr(sc.times).map((x) => String(x)).slice();
+  renderChips();
+  const info = $('schedInfo');
+  if (info) {
+    info.textContent = '任务 ' + (sc.state === undefined ? '—' : sc.state)
+      + (sc.next ? ' · 下次 ' + sc.next : '')
+      + (sc.netTask ? ' · 断网补签已启用' : '');
+  }
+}
+
+function renderToggles(r) {
+  const swA = $('swAuto');
+  if (swA) swA.className = 'sw' + (r.autostart ? ' on' : '');
+  const sA = $('sAuto'); if (sA) sA.textContent = r.autostart ? '已启用' : '未启用';
+
+  const rr = obj(r.hourly);
+  const swH = $('swHour');
+  if (swH) swH.className = 'sw' + (rr.enabled ? ' on' : '');
+  const sel = $('selHour');
+  if (sel && document.activeElement !== sel) sel.value = String(num(rr.hours) || 1);
+  const sH = $('sHour');
+  if (sH) {
+    if (rr.enabled) {
+      const label = rr.label ? String(rr.label) : (num(rr.hours) + ' 小时');
+      const accs = arr(r.accounts);
+      const allDone = accs.length > 0 && accs.filter((a) => a.enabled !== false).every(isAccDone);
+      sH.textContent = '已启用 · 每 ' + label + ' 尝试一次'
+        + (rr.next ? ' · 下次 ' + rr.next : '')
+        + (allDone ? '（今日已完成，会静默跳过）' : '（今日有未完成账号，会继续重试）');
+    } else {
+      sH.textContent = '未启用';
+    }
+  }
+}
+
+function credRow(name, side, cred) {
+  const row = el('div', 'row');
+  const nm = el('div', 'name');
+  nm.appendChild(el('span', 'dot ' + (hasCred(cred) ? 'ok' : 'no')));
+  const b = el('b', null, name + ' · ' + side);
+  b.style.maxWidth = '250px';
+  b.style.overflow = 'hidden';
+  b.style.textOverflow = 'ellipsis';
+  b.style.whiteSpace = 'nowrap';
+  b.title = name + ' · ' + side;
+  nm.appendChild(b);
+  row.appendChild(nm);
+  row.appendChild(el('div', 'muted credtext', side === 'Trae' ? traeCredFull(cred) : wbCredFull(cred)));
+  return row;
+}
+
+function renderCredsCard(r, list) {
+  const box = $('credsList');
+  if (!box) return;
+  box.textContent = '';
+  if (!list.length) {
+    const fc = obj(r.creds);
+    box.appendChild(credRow('本机（默认）', 'Trae', fc.trae));
+    box.appendChild(credRow('本机（默认）', 'WorkBuddy', fc.workbuddy));
+  } else {
+    list.forEach((a) => {
+      const c = obj(a.creds);
+      box.appendChild(credRow(a.name || a.id, 'Trae', c.trae));
+      box.appendChild(credRow(a.name || a.id, 'WorkBuddy', c.workbuddy));
+    });
+  }
+  const target = list.filter((a) => obj(a).enabled !== false)[0] || list[0] || null;
+  const btn = $('btnWbLogin');
+  if (btn) {
+    btn.disabled = !target;
+    if (!target) {
+      btn.textContent = 'WorkBuddy 登录授权';
+    } else {
+      const hasWb = hasCred(obj(target.creds).workbuddy);
+      btn.textContent = (hasWb ? '重新授权' : 'WorkBuddy 登录授权') + '（' + (target.name || target.id) + '）';
+      btn.title = '为账号「' + (target.name || target.id) + '」发起 WorkBuddy 授权';
+    }
+  }
+}
+
+/* ---------- 账号管理 ---------- */
+function updateBatchUI() {
+  const n = selected.size;
+  const total = accounts.length;
+  const btn = $('btnBatchCheckin');
+  if (btn) {
+    btn.disabled = (n === 0) || busy || !!checkingNames;
+    btn.textContent = '批量签到（选中 ' + n + ' 个）';
+    btn.title = n === 0 ? '未选择账号将签到全部启用账号' : '对已勾选的 ' + n + ' 个账号执行签到';
+  }
+  const chk = $('chkAllAccounts');
+  if (chk) {
+    chk.checked = total > 0 && n === total;
+    chk.indeterminate = n > 0 && n < total;
+    chk.disabled = total === 0;
+  }
+  const top = $('btnCheckin');
+  if (top && !checkingNames) top.disabled = busy;
+  const hint = $('batchHint');
+  if (hint) {
+    if (checkingNames) {
+      hint.textContent = '正在签到：' + checkingNames.join('、') + ' —— 每个账号会输出一行日志，可展开「最近日志」查看进度。';
+    } else if (n === 0) {
+      hint.textContent = '未选择账号将签到全部启用账号';
+    } else {
+      hint.textContent = '已选择 ' + n + ' 个账号，将按账号逐个签到（仅影响批量签到范围）。';
+    }
+  }
+}
+
+function renderAccounts() {
+  const box = $('accList');
+  if (!box) return;
+  const ae = document.activeElement;
+  if (credEditor && ae && ae.tagName === 'INPUT' && box.contains(ae)) {
+    // 用户正在填写凭证表单，避免重建导致输入丢失
+    updateBatchUI();
+    return;
+  }
+  box.textContent = '';
+  if (!accounts.length) {
+    box.appendChild(el('div', 'muted empty', '尚未配置账号，点击左上「添加账号」开始。'));
+    updateBatchUI();
+    return;
+  }
+  accounts.forEach((a) => box.appendChild(accountRow(a)));
+  updateBatchUI();
+}
+
+function dotCell(label, t) {
+  const o = obj(t);
+  const ok = o.ok === true;
+  const c = el('span', 'cell');
+  c.appendChild(el('span', 'dot ' + (ok ? 'ok' : 'no')));
+  c.appendChild(el('span', null, label));
+  c.appendChild(el('span', ok ? 'ok' : 'no', ok ? '已签' : '未签'));
+  c.title = label + '：' + (ok ? ('已完成 ' + fmtTime(o.at)) : '尚未完成');
+  return c;
+}
+
+function sideToggle(a, key, label, on) {
+  const wrap = el('div', 'side');
+  wrap.setAttribute('role', 'switch');
+  wrap.setAttribute('aria-checked', on ? 'true' : 'false');
+  wrap.setAttribute('aria-label', label + ' 是否参与签到');
+  wrap.tabIndex = 0;
+  wrap.title = '点击切换：' + label + ' 是否参与每日签到（与「今日是否完成」无关）';
+  wrap.appendChild(el('span', 'sw sm' + (on ? ' on' : '')));
+  wrap.appendChild(el('span', null, '参与 ' + label + '：' + (on ? '开' : '关')));
+  const fire = function () { toggleSide(a, key, !on, label); };
+  wrap.addEventListener('click', fire);
+  wrap.addEventListener('keydown', function (ev) {
+    if (ev.key === ' ' || ev.key === 'Enter' || ev.key === 'Spacebar') { ev.preventDefault(); fire(); }
+  });
+  return wrap;
+}
+
+function accountRow(a) {
+  const o = obj(a);
+  const row = el('div', 'acc' + (o.enabled === false ? ' off' : ''));
+
+  const pick = el('input', 'pick');
+  pick.type = 'checkbox';
+  pick.checked = selected.has(o.id);
+  pick.title = '勾选以纳入批量签到范围';
+  pick.setAttribute('aria-label', '选择账号 ' + (o.name || o.id));
+  pick.addEventListener('change', function () {
+    if (pick.checked) selected.add(o.id); else selected.delete(o.id);
+    updateBatchUI();
+  });
+  row.appendChild(pick);
+
+  const nm = el('div', 'nm');
+  const nmb = el('b', null, o.name || o.id);
+  nmb.title = o.name || o.id;
+  nm.appendChild(nmb);
+  if (o.legacy) nm.appendChild(el('span', 'tag', '旧版'));
+  const bw = el('button', 'btn tiny', '改名');
+  bw.type = 'button';
+  bw.title = '重命名该账号';
+  bw.addEventListener('click', function () { renameAccount(o); });
+  nm.appendChild(bw);
+  row.appendChild(nm);
+
+  const today = obj(o.today);
+  row.appendChild(dotCell('Trae 今日', today.trae));
+  row.appendChild(dotCell('WorkBuddy 今日', today.workbuddy));
+
+  const seg = el('div', 'seg');
+  seg.appendChild(sideToggle(o, 'trae', 'Trae', sideOn(o.sides, 'trae')));
+  seg.appendChild(sideToggle(o, 'workbuddy', 'WorkBuddy', sideOn(o.sides, 'workbuddy')));
+  row.appendChild(seg);
+
+  const creds = obj(o.creds);
+  const credBox = el('div', 'creds');
+  const c1 = el('span', 'citem', 'Trae：' + traeCredText(creds.trae));
+  c1.title = 'Trae：' + traeCredText(creds.trae);
+  const c2 = el('span', 'citem', 'WB：' + wbCredText(creds.workbuddy));
+  c2.title = 'WorkBuddy：' + wbCredText(creds.workbuddy);
+  credBox.appendChild(c1);
+  credBox.appendChild(c2);
+  row.appendChild(credBox);
+
+  const acts = el('div', 'acts');
+  const wbBtn = el('button', 'btn tiny', hasCred(creds.workbuddy) ? 'WorkBuddy 重新授权' : 'WorkBuddy 授权');
+  wbBtn.type = 'button';
+  wbBtn.title = '为该账号发起 WorkBuddy 授权';
+  wbBtn.addEventListener('click', function () { startWbLogin(o); });
+  acts.appendChild(wbBtn);
+
+  const tkBtn = el('button', 'btn tiny', 'Trae 凭证');
+  tkBtn.type = 'button';
+  tkBtn.title = '手动填写 / 清除该账号的 Trae token';
+  tkBtn.addEventListener('click', function () { openCredEditor(o.id); });
+  acts.appendChild(tkBtn);
+
+  const enBtn = el('button', 'btn tiny', o.enabled === false ? '启用' : '停用');
+  enBtn.type = 'button';
+  enBtn.title = o.enabled === false ? '恢复该账号（重新参与签到与补签）' : '停用该账号（不再参与签到与补签）';
+  enBtn.addEventListener('click', function () { setEnabled(o, o.enabled === false); });
+  acts.appendChild(enBtn);
+
+  const delBtn = el('button', 'btn tiny danger', '删除');
+  delBtn.type = 'button';
+  delBtn.title = '删除该账号及其凭证（不可恢复）';
+  delBtn.addEventListener('click', function () { removeAccount(o); });
+  acts.appendChild(delBtn);
+
+  row.appendChild(acts);
+
+  if (credEditor && credEditor.id === o.id) row.appendChild(credForm(o));
+  return row;
+}
+
+function credForm(a) {
+  const f = el('div', 'credform show');
+  f.appendChild(el('div', 'muted', 'Trae 凭证（手动配置优先于本机客户端；两项都留空保存 = 清除手动凭证）'));
+  const g = el('div', 'grid2');
+
+  const f1 = el('div', 'f');
+  f1.appendChild(el('label', null, 'Trae Token'));
+  const i1 = el('input');
+  i1.type = 'password';
+  i1.placeholder = '粘贴 Trae token';
+  i1.value = credEditor.token || '';
+  i1.setAttribute('autocomplete', 'off');
+  i1.setAttribute('aria-label', 'Trae Token');
+  i1.addEventListener('input', function () { if (credEditor && credEditor.id === a.id) credEditor.token = i1.value; });
+  f1.appendChild(i1);
+
+  const f2 = el('div', 'f');
+  f2.appendChild(el('label', null, '设备 ID（可留空）'));
+  const i2 = el('input');
+  i2.type = 'text';
+  i2.placeholder = 'deviceId';
+  i2.value = credEditor.deviceId || '';
+  i2.setAttribute('autocomplete', 'off');
+  i2.setAttribute('aria-label', '设备 ID');
+  i2.addEventListener('input', function () { if (credEditor && credEditor.id === a.id) credEditor.deviceId = i2.value; });
+  f2.appendChild(i2);
+
+  g.appendChild(f1);
+  g.appendChild(f2);
+  f.appendChild(g);
+
+  const bar = el('div', 'credrow');
+  const save = el('button', 'btn tiny primary', '保存');
+  save.type = 'button';
+  save.addEventListener('click', function () { saveTraeToken(a, i1.value, i2.value); });
+  const clr = el('button', 'btn tiny', '清除');
+  clr.type = 'button';
+  clr.addEventListener('click', function () { saveTraeToken(a, '', ''); });
+  const cancel = el('button', 'btn tiny', '关闭');
+  cancel.type = 'button';
+  cancel.addEventListener('click', function () { credEditor = null; renderAccounts(); });
+  bar.appendChild(save);
+  bar.appendChild(clr);
+  bar.appendChild(cancel);
+  f.appendChild(bar);
+  return f;
+}
+
+function openCredEditor(id) {
+  if (credEditor && credEditor.id === id) { credEditor = null; renderAccounts(); return; }
+  credEditor = { id: id, token: '', deviceId: '' };
+  renderAccounts();
+  const box = $('accList');
+  if (box) {
+    const i = box.querySelector('.credform input');
+    if (i && i.focus) i.focus();
+  }
+}
+
+/* ---------- 账号操作 ---------- */
+async function renameAccount(a) {
+  const cur = a.name || a.id;
+  const v = window.prompt('重命名账号', cur);
+  if (v === null) return;
+  const name = String(v).trim();
+  if (!name) { toast('名称不能为空', 'bad'); return; }
+  if (name === cur) return;
+  const r = await postJson('/api/accounts', { action: 'rename', id: a.id, name: name });
+  if (r && r.ok) { toast(r.message || '已重命名为「' + name + '」', 'ok'); applyAccounts(r.accounts); }
+  else toast((r && r.message) || '重命名失败', 'bad');
+  await loadStatus();
+}
+
+async function setEnabled(a, enabled) {
+  const r = await postJson('/api/accounts', { action: 'enable', id: a.id, enabled: !!enabled });
+  if (r && r.ok) { toast(r.message || (enabled ? '已启用账号' : '已停用账号'), 'ok'); applyAccounts(r.accounts); }
+  else toast((r && r.message) || '设置失败', 'bad');
+  await loadStatus();
+}
+
+async function removeAccount(a) {
+  const name = a.name || a.id;
+  if (!window.confirm('确定删除账号「' + name + '」？\n该账号的 Trae / WorkBuddy 凭证会一并删除，且不可恢复。')) return;
+  const r = await postJson('/api/accounts', { action: 'remove', id: a.id });
+  if (r && r.ok) {
+    selected.delete(a.id);
+    toast(r.message || '已删除账号', 'ok');
+    applyAccounts(r.accounts);
+  } else {
+    toast((r && r.message) || '删除失败', 'bad');
+  }
+  await loadStatus();
+}
+
+async function addAccount() {
+  const b = $('btnAddAccount');
+  if (b) b.disabled = true;
+  const r = await postJson('/api/accounts', { action: 'add' });
+  if (b) b.disabled = false;
+  if (r && r.ok) { toast(r.message || '已新增账号', 'ok'); applyAccounts(r.accounts); }
+  else toast((r && r.message) || '新增账号失败', 'bad');
+  await loadStatus();
+}
+
+async function saveTraeToken(a, token, deviceId) {
+  const t = String(token || '').trim();
+  const d = String(deviceId || '').trim();
+  if (!t && !d && !window.confirm('Token 与设备 ID 均为空，将清除账号「' + (a.name || a.id) + '」的手动 Trae 凭证，继续？')) return;
+  const r = await postJson('/api/accounts', { action: 'trae-token', id: a.id, token: t, deviceId: d });
+  if (r && r.ok) {
+    credEditor = null;
+    toast(r.message || (t ? 'Trae 凭证已保存' : 'Trae 凭证已清除'), 'ok');
+    applyAccounts(r.accounts);
+  } else {
+    toast((r && r.message) || '保存失败', 'bad');
+  }
+  await loadStatus();
+}
+
+async function toggleSide(a, key, value, label) {
+  const sides = { trae: sideOn(a.sides, 'trae'), workbuddy: sideOn(a.sides, 'workbuddy') };
+  sides[key] = value;
+  a.sides = sides;             // 乐观更新
+  renderAccounts();
+  const r = await postJson('/api/accounts', { action: 'sides', id: a.id, trae: !!sides.trae, workbuddy: !!sides.workbuddy });
+  if (r && r.ok) { toast(label + (value ? '：已参与签到' : '：已暂停参与签到'), 'ok'); applyAccounts(r.accounts); }
+  else toast((r && r.message) || '设置失败', 'bad');
+  await loadStatus();
+}
+
+/* ---------- WorkBuddy 授权 ---------- */
+async function startWbLogin(a) {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  const accountId = a && a.id ? a.id : '';
+  const label = a ? ('账号「' + (a.name || a.id) + '」') : '当前账号';
+  const body = accountId ? { accountId: accountId } : {};
+  const r = await postJson('/api/wb-login/start', body);
+  const box = $('authBox'), who = $('authWho'), url = $('authUrl'), st = $('authState');
+  if (box) box.classList.add('show');
+  if (who) who.textContent = '正在为 ' + label + ' 授权 —— 请确认浏览器中打开的授权页属于该账号';
+  if (!r || !r.ok) {
+    if (st) st.textContent = '❌ ' + ((r && r.message) || '发起授权失败');
+    toast((r && r.message) || '发起授权失败', 'bad');
+    return;
+  }
+  if (url) {
+    url.textContent = r.authUrl || '（未返回授权链接）';
+    url.href = r.authUrl || '#';
+  }
+  if (r.authUrl) window.open(r.authUrl, '_blank');
+  if (st) st.innerHTML = '<span class="spin"></span>等待授权中…';
+  const ttl = (typeof r.expiresIn === 'number' && r.expiresIn > 0 ? r.expiresIn : 600) * 1000;
+  authPollDeadline = Date.now() + ttl + 5000;
+  pollTimer = setInterval(async function () {
+    if (Date.now() > authPollDeadline) {
+      clearInterval(pollTimer); pollTimer = null;
+      if (st) st.textContent = '⌛ 等待授权超时，请重新发起';
+      toast('等待授权超时', 'bad');
+      return;
+    }
+    const u = '/api/wb-login/poll' + (accountId ? ('?accountId=' + encodeURIComponent(accountId)) : '');
+    const p = await getJson(u);
+    if (!p) return;
+    if (p.done === true) {
+      clearInterval(pollTimer); pollTimer = null;
+      if (p.ok === true) {
+        if (st) st.textContent = '✅ ' + label + ' 授权成功' + (p.nickname ? '（' + p.nickname + '）' : '');
+        toast(label + ' 授权成功', 'ok');
+      } else {
+        if (st) st.textContent = '❌ ' + (p.message || '授权失败');
+        toast(p.message || '授权失败', 'bad');
+      }
+      await loadStatus();
+    }
+  }, 2500);
+}
+
+/* ---------- 签到 ---------- */
+async function doCheckin(ids) {
+  if (checkingNames || busy) { toast('签到正在进行中，请稍候', 'bad'); return; }
+  const pick = arr(ids).filter((x) => typeof x === 'string' && x);
+  const src = pick.length
+    ? accounts.filter((a) => pick.indexOf(a.id) >= 0)
+    : accounts.filter((a) => a.enabled !== false);
+  const names = src.map((a) => a.name || a.id);
+  checkingNames = names.length ? names : ['全部启用账号'];
+
+  const top = $('btnCheckin');
+  const old = top ? top.textContent : '立即签到';
+  if (top) { top.disabled = true; top.innerHTML = '<span class="spin"></span>签到中…'; }
+  updateBatchUI();
+
+  let r = null;
+  try {
+    r = await postJson('/api/checkin', pick.length ? { accounts: pick.slice() } : {});
+  } catch (e) { r = null; }
+
+  checkingNames = null;
+  if (top) { top.textContent = old; top.disabled = false; }
+  if (!r) toast('签到请求失败，请查看日志', 'bad');
+  else if (r.ok) toast(r.message || ('已完成 ' + names.length + ' 个账号的签到'), 'ok');
+  else if (r.busy) toast(r.message || '签到正在进行中', 'bad');
+  else toast(r.message || '签到结束（可能有失败项，见日志）', 'bad');
+
+  await Promise.all([loadStatus(), loadLog()]);
+  updateBatchUI();
+}
+
+/* ---------- 其它卡片 ---------- */
 function renderChips() {
-  const box = $('chips'); box.innerHTML = '';
-  if (!scheduledTimes.length) { box.innerHTML = '<span class="muted">尚未设置</span>'; return; }
+  const box = $('chips');
+  if (!box) return;
+  box.textContent = '';
+  if (!scheduledTimes.length) {
+    box.appendChild(el('span', 'muted', '尚未设置'));
+    return;
+  }
   scheduledTimes.forEach((tm, i) => {
-    const el = document.createElement('div');
-    el.className = 'chip';
-    el.innerHTML = '<b>' + tm + '</b>';
-    const b = document.createElement('button'); b.textContent = '×'; b.title = '移除';
-    b.onclick = () => { scheduledTimes.splice(i, 1); renderChips(); };
-    el.appendChild(b); box.appendChild(el);
+    const chip = el('div', 'chip');
+    chip.appendChild(el('b', null, tm));
+    const b = el('button', null, '×');
+    b.title = '移除';
+    b.addEventListener('click', function () { scheduledTimes.splice(i, 1); renderChips(); });
+    chip.appendChild(b);
+    box.appendChild(chip);
   });
 }
 
 async function loadLog() {
-  const r = await fetch('/api/log?lines=40').then(x => x.json()).catch(() => null);
-  if (r && r.lines) $('log').textContent = r.lines.join('\n') || '（暂无日志）';
+  const r = await getJson('/api/log?lines=40');
+  const box = $('log');
+  if (!box) return;
+  if (r && Array.isArray(r.lines)) box.textContent = r.lines.join('\n') || '（暂无日志）';
 }
 
-$('btnRefresh').onclick = async () => { await Promise.all([loadStatus(), loadLog()]); toast('已刷新', 'ok'); };
-
-$('btnCheckin').onclick = async () => {
-  const b = $('btnCheckin'); b.disabled = true; const old = b.textContent;
-  b.innerHTML = '<span class="spin"></span>签到中…';
+async function loadStatus() {
+  const r = await getJson('/api/status');
+  if (!r) {
+    if (lastStatusOk) toast('无法连接后端', 'bad');
+    lastStatusOk = false;
+    const sub = $('sub');
+    if (sub) sub.textContent = '无法连接后端，请确认面板服务是否运行';
+    return;
+  }
+  lastStatusOk = true;
   try {
-    const r = await fetch('/api/checkin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(x => x.json());
-    toast(r.ok ? '签到完成' : (r.busy ? r.message : '签到结束（可能有失败项，见日志）'), r.ok ? 'ok' : 'bad');
-  } catch (e) { toast('请求失败：' + e.message, 'bad'); }
-  b.disabled = false; b.textContent = old;
-  await Promise.all([loadStatus(), loadLog()]);
-};
-
-$('btnAddTime').onclick = () => {
-  const v = $('newTime').value;
-  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(v)) return toast('请选择合法时间', 'bad');
-  if (scheduledTimes.includes(v)) return toast('该时间已存在', 'bad');
-  scheduledTimes.push(v); scheduledTimes.sort(); renderChips();
-};
-
-$('btnSaveTime').onclick = async () => {
-  const r = await fetch('/api/schedule', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ times: scheduledTimes }) }).then(x => x.json()).catch(() => null);
-  if (r && r.ok) { toast('已保存，共 ' + scheduledTimes.length + ' 个时段', 'ok'); await loadStatus(); }
-  else toast((r && r.message) || '保存失败', 'bad');
-};
-
-$('tgAuto').onclick = async () => {
-  const on = !$('swAuto').classList.contains('on');
-  $('swAuto').className = 'sw' + (on ? ' on' : '');
-  const r = await fetch('/api/autostart', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ enabled: on }) }).then(x => x.json()).catch(() => null);
-  if (r && r.ok) { toast(on ? '已开启开机自动补签' : '已关闭开机自动补签', 'ok'); await loadStatus(); }
-  else { toast('设置失败', 'bad'); await loadStatus(); }
-};
+    render(r);
+  } catch (e) {
+    console.error('[render]', e);
+  }
+}
 
 async function postHourly(enabled, hours) {
-  return await fetch('/api/hourly', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ enabled: enabled, hours: hours }) }).then(x => x.json()).catch(() => null);
+  return await postJson('/api/hourly', { enabled: enabled, hours: hours });
 }
-$('tgHour').onclick = async () => {
-  const on = !$('swHour').classList.contains('on');
-  $('swHour').className = 'sw' + (on ? ' on' : '');
+
+/* ---------- 事件绑定 ---------- */
+bindEv('btnRefresh', 'click', async function () {
+  await Promise.all([loadStatus(), loadLog()]);
+  toast('已刷新', 'ok');
+});
+bindEv('btnCheckin', 'click', function () { doCheckin(Array.from(selected)); });
+bindEv('btnBatchCheckin', 'click', function () { doCheckin(Array.from(selected)); });
+bindEv('btnAddAccount', 'click', function () { addAccount(); });
+bindEv('chkAllAccounts', 'change', function (ev) {
+  const on = !!(ev.target && ev.target.checked);
+  selected = new Set(on ? accounts.map((a) => a.id) : []);
+  renderAccounts();
+});
+bindEv('btnWbLogin', 'click', function () {
+  const target = accounts.filter((a) => a.enabled !== false)[0] || accounts[0] || null;
+  if (!target) { toast('请先在「账号管理」中添加账号', 'bad'); return; }
+  startWbLogin(target);
+});
+bindEv('btnAddTime', 'click', function () {
+  const v = $('newTime').value;
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(v)) { toast('请选择合法时间', 'bad'); return; }
+  if (scheduledTimes.indexOf(v) >= 0) { toast('该时间已存在', 'bad'); return; }
+  scheduledTimes.push(v); scheduledTimes.sort(); renderChips();
+});
+bindEv('btnSaveTime', 'click', async function () {
+  const r = await postJson('/api/schedule', { times: scheduledTimes });
+  if (r && r.ok) { toast('已保存，共 ' + scheduledTimes.length + ' 个时段', 'ok'); await loadStatus(); }
+  else toast((r && r.message) || '保存失败', 'bad');
+});
+bindEv('tgAuto', 'click', async function () {
+  const sw = $('swAuto');
+  const on = !(sw && sw.classList.contains('on'));
+  if (sw) sw.className = 'sw' + (on ? ' on' : '');
+  const r = await postJson('/api/autostart', { enabled: on });
+  if (r && r.ok) toast(on ? '已开启开机自动补签' : '已关闭开机自动补签', 'ok');
+  else toast('设置失败', 'bad');
+  await loadStatus();
+});
+bindEv('tgHour', 'click', async function () {
+  const sw = $('swHour');
+  const on = !(sw && sw.classList.contains('on'));
+  if (sw) sw.className = 'sw' + (on ? ' on' : '');
   const r = await postHourly(on, Number($('selHour').value));
   if (r && r.ok) toast(on ? '已开启自动重试' : '已关闭自动重试', 'ok');
   else toast('设置失败', 'bad');
   await loadStatus();
-};
-$('selHour').onchange = async () => {
-  const on = $('swHour').classList.contains('on');
+});
+bindEv('selHour', 'change', async function () {
+  const sw = $('swHour');
+  const on = !!(sw && sw.classList.contains('on'));
   const r = await postHourly(on, Number($('selHour').value));
   if (r && r.ok) toast('重试间隔已更新', 'ok'); else toast('设置失败', 'bad');
   await loadStatus();
-};
+});
 
-$('btnWbLogin').onclick = async () => {
-  const r = await fetch('/api/wb-login/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
-    .then(x => x.json()).catch(() => null);
-  if (!r || !r.ok) return toast('发起授权失败', 'bad');
-  $('authBox').classList.add('show');
-  $('authUrl').textContent = r.authUrl; $('authUrl').href = r.authUrl;
-  window.open(r.authUrl, '_blank');
-  $('authState').innerHTML = '<span class="spin"></span>等待授权中…';
-  clearInterval(pollTimer);
-  pollTimer = setInterval(async () => {
-    const p = await fetch('/api/wb-login/poll').then(x => x.json()).catch(() => null);
-    if (!p) return;
-    if (p.done) {
-      clearInterval(pollTimer);
-      if (p.ok) { $('authState').textContent = '✅ 授权成功' + (p.nickname ? '（' + p.nickname + '）' : ''); toast('授权成功', 'ok'); }
-      else { $('authState').textContent = '❌ ' + (p.message || '授权失败'); toast(p.message || '授权失败', 'bad'); }
-      await loadStatus();
-    }
-  }, 2500);
-};
-
-(async () => { await Promise.all([loadStatus(), loadLog()]); setInterval(loadStatus, 30000); setInterval(loadLog, 30000); })();
+(async function init() {
+  try { await Promise.all([loadStatus(), loadLog()]); } catch (e) { console.error('[init]', e); }
+  setInterval(function () { loadStatus().catch(function () {}); }, 30000);
+  setInterval(function () { loadLog().catch(function () {}); }, 30000);
+})();
 </script>
 </body>
 </html>

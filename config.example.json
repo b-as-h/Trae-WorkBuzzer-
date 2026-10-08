@@ -1,4 +1,25 @@
 {
+  "_说明": "多账号配置示例。真实凭证请只写在本机的 config.json 里（已在 .gitignore 中排除，等价于密码，不要提交/分享）。accounts 为空或不存在时，本工具会按 'default' 单账号模式运行，旧配置无需改动。",
+  "accounts": [
+    {
+      "id": "default",
+      "name": "主账号",
+      "enabled": true,
+      "trae": {
+        "enabled": true,
+        "manualToken": "",
+        "deviceId": ""
+      },
+      "workbuddy": {
+        "enabled": true,
+        "accessToken": "",
+        "refreshToken": "",
+        "uid": "",
+        "domain": "",
+        "refreshedAt": 0
+      }
+    }
+  ],
   "trae": {
     "host": "https://api.trae.cn",
     "region": "CN",
@@ -11,12 +32,9 @@
     "maxWait": 30000,
     "deadlineMs": 480000
   },
-  "workbuddy": {
-    "accessToken": "",
-    "refreshToken": "",
-    "uid": "",
-    "domain": "",
-    "refreshedAt": 0
+  "workbuddy": {},
+  "batch": {
+    "intervalMs": 1500
   },
   "networkRetry": {
     "enabled": true,
