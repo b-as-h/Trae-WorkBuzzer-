@@ -25,7 +25,11 @@ script = fso.BuildPath(root, "checkin.js")
 ' install > PATH lookup. The version folder is discovered at runtime on purpose:
 ' hard-coding it meant an upgraded managed Node silently fell through to a
 ' different runtime, or made the launcher fail once that folder was removed.
-nodeExe = FindManagedNode(fso, sh)
+' 0) Bundled portable runtime shipped with the installer (highest priority).
+If fso.FileExists(fso.BuildPath(root, "runtime\node.exe")) Then
+  nodeExe = fso.BuildPath(root, "runtime\node.exe")
+End If
+If nodeExe = "" Then nodeExe = FindManagedNode(fso, sh)
 If nodeExe = "" Then
   If fso.FileExists("C:\Program Files\node\node.exe") Then
     nodeExe = "C:\Program Files\node\node.exe"

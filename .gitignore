@@ -26,3 +26,8 @@ wb-auth.log
 *.orig
 Thumbs.db
 Desktop.ini
+
+# ── 安装包构建产物（暂存目录 / 输出目录 / 捆绑运行时，不入库；build.ps1 要入库）──
+build/app/
+build/dist/
+runtime/

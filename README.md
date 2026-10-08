@@ -30,16 +30,27 @@
 
 ## 快速开始
 
+### 0. 安装（推荐：下载安装包）
+
+从 [Releases](https://github.com/b-as-h/Trae-WorkBuzzer-/releases) 下载 `TraeCheckin-Setup-vX.Y.Z.exe`，双击安装即可 —— **自带 Node 运行时，无需安装 Node.js**：
+
+- 安装到 `%LOCALAPPDATA%\Programs\TraeCheckin`（免管理员），建议勾选「注册计划任务」
+- 桌面快捷方式为可选项；开始菜单含「打开签到面板 / 状态总览 / 手动签到一次」
+- **升级**：直接运行新版安装包覆盖，`config.json`（凭证）与签到状态不会被覆盖
+- **卸载**：设置 → 应用 →「Trae 签到助手」；计划任务只在指向本安装时才被注销，账号凭证默认保留
+
+从源码运行则继续看下面（需要 Node.js ≥ 18）。
+
 ### 环境要求
 
 - Windows 10 / 11
-- **Node.js ≥ 18**
+- **Node.js ≥ 18**（从源码运行才需要；安装包自带运行时）
 - 已安装并登录 **Trae CN 客户端**（只管理本机这一个 Trae 账号时无需其它配置；多个 Trae 账号见「多账号管理」）
 - 一个或多个 WorkBuddy 账号（每个账号单独授权一次）
 
 > 没有 `npm install` 这一步 —— 项目零依赖。
 
-### 1. 部署
+### 1. 从源码部署
 
 ```powershell
 git clone https://github.com/b-as-h/Trae-WorkBuzzer-.git
@@ -180,6 +191,12 @@ node get-trae-creds.js --mask               # 只看指纹，不打印 token 本
 ├── ui.cmd                  面板入口：已在运行则直接开浏览器，否则隐藏启动
 ├── run-panel.vbs           面板隐藏窗口启动器
 ├── run-hidden.vbs          签到任务隐藏窗口启动器
+├── checkin.cmd              手动签到入口（安装包/双击用，自动选运行时）
+├── installer/
+│   ├── Setup.iss            Inno Setup 安装脚本
+│   └── ChineseSimplified.isl 中文向导语言文件（来自官方 issrc）
+├── build/
+│   └── build.ps1            构建安装包（暂存 + 编译，产物在 build/dist/）
 ├── probe.ps1               面板就绪探测（原生 TCP，毫秒级）
 ├── register-task.ps1       注册 Windows 计划任务
 ├── notify-toast.ps1        系统通知
@@ -364,6 +381,16 @@ Fork 自 [xinshang777/auto-checkin](https://github.com/xinshang777/auto-checkin)
 - 建议保持低频：仍然是每天一次 + 失败重试，不要把账号数扩到与个人使用无关的规模，也不要靠调小 `batch.intervalMs` 去「提速」。风险与账号数量、频率正相关，工具无法替你消除它。
 - `config.json` 与 `.wb-browser-profile/` 等价于你的登录密码，**不要提交、不要分享、不要放进云盘**。本仓库的 `.gitignore` 已排除它们。
 - 仅供学习交流，**作者不对任何账号损失、限流、积分收回或服务条款纠纷负责**。
+
+## 自行构建安装包
+
+```powershell
+# 依赖：Inno Setup 6（winget install JRSoftware.InnoSetup）
+powershell -ExecutionPolicy Bypass -File build\build.ps1
+# 产物：build\dist\TraeCheckin-Setup-v1.0.0.exe（约 25MB，含 Node 运行时）
+```
+
+构建过程会把程序文件与捆绑的 `runtime\node.exe` 暂存到 `build\app\`（**不包含**任何凭证与日志），再由 Inno Setup 编译。安装向导为中文（语言文件随仓库入库，编译不依赖网络）。
 
 ## 致谢与许可
 
