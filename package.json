@@ -1,15 +1,17 @@
 {
-  "name": "auto-checkin",
-  "version": "1.2.0",
+  "name": "trae-workbuddy-checkin",
+  "version": "2.0.0",
   "private": true,
-  "description": "Trae + WorkBuddy 每日自动签到（每天 5 次：00:01 / 09:00 / 13:00 / 17:00 / 21:00；断网时联网自动补签；隐藏窗口后台运行，当日完成后自动跳过，结果有系统通知）",
+  "description": "Trae CN + WorkBuddy 每日自动签到，附本地 Web 面板。Windows 计划任务四层兜底，零运行时依赖。",
   "scripts": {
     "checkin": "node checkin.js",
     "checkin:force": "node checkin.js --force",
-    "capture": "node capture-trae-token.js",
-    "install-browser": "playwright install chromium"
+    "status": "node status.js --once",
+    "panel": "node server.js",
+    "wb-login": "node wb-auth.js login",
+    "register-task": "powershell -ExecutionPolicy Bypass -File ./register-task.ps1"
   },
-  "dependencies": {
-    "playwright": "^1.64.0"
+  "engines": {
+    "node": ">=18"
   }
 }

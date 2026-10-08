@@ -16,8 +16,7 @@
     "refreshToken": "",
     "uid": "",
     "domain": "",
-    "refreshedAt": 0,
-    "atRestSecretKey": ""
+    "refreshedAt": 0
   },
   "networkRetry": {
     "enabled": true,

@@ -1,21 +1,29 @@
 # 架构说明
 
-本文说明 `auto-checkin` 的运行链路、模块职责与关键设计取舍。README 里已有的安装步骤不再重复。
+本文说明本项目的运行链路、模块职责与关键设计取舍。README 里已有的安装步骤不再重复。
 
 ## 运行链路
 
 ```text
-Windows 计划任务 DailyCheckin（每天 00:01 / 09:00 / 13:00 / 17:00 / 21:00）
-Windows 计划任务 DailyCheckinOnNet（系统事件「网络已连接」→ 静默补签 --quiet-skip）
-  └─ wscript.exe //B //Nologo run-hidden.vbs      ← GUI 子系统宿主：自身不创建控制台
-       └─ node checkin.js                          ← WshShell.Run(cmd, 0, False)：隐藏窗口、不等待
-            ├─ acquireLock()          state/run.lock.json      单实例互斥
-            ├─ dailyState.loadState() state/daily-status.json  当日签到状态
-            ├─ runWorkbuddy(cfg)      lib/workbuddy.js
-            │    └─（token 缺失/将过期时）capture-workbuddy-token.js（无头 Playwright）
-            ├─ runTrae(cfg)           lib/trae.js
-            ├─ 断网时：lib/net.js 等待联网（默认 ≤10 分钟）→ 恢复后重试一轮
-            └─ 收尾：写状态 + checkin.log（超过 1 MiB 自动轮转）+ 系统通知（lib/notify.js）
+Windows 计划任务，共 4 个，全部挂到同一个入口：
+  DailyCheckin        每天 N 个时段（面板可改，默认 00:01 / 09:00 / 13:00 / 17:00 / 21:00）
+  DailyCheckinOnNet   系统事件「网络已连接」(10000) → --quiet-skip 静默补签
+  DailyCheckinOnLogon 用户登录后 30 秒 → --quiet-skip 静默补签（面板可开关）
+  DailyCheckinHourly  每 N 小时（默认 1）→ --quiet-skip 静默重试（面板可开关）
+    └─ wscript.exe //B //Nologo run-hidden.vbs   ← GUI 子系统宿主：自身不创建控制台
+         └─ node checkin.js                       ← WshShell.Run(cmd, 0, False)：隐藏窗口、不等待
+              ├─ --quiet-skip 且两端已完成 → 立刻 return（不抢锁、不写日志、不发请求）
+              ├─ acquireLock()          state/run.lock.json      单实例互斥
+              ├─ dailyState.loadState() state/daily-status.json  当日签到状态
+              ├─ runWorkbuddy(cfg)      lib/workbuddy.js
+              │    └─（凭证缺失/临期/401）node wb-auth.js ensure（纯 HTTP，无浏览器）
+              ├─ runTrae(cfg)           lib/trae.js
+              ├─ 断网时：lib/net.js 等待联网（默认 ≤10 分钟）→ 恢复后重试一轮
+              └─ 收尾：写状态 + checkin.log（超过 1 MiB 自动轮转）+ 系统通知（lib/notify.js）
+
+面板侧（与签到链路解耦，不参与签到）：
+  ui.cmd → probe.ps1（就绪探测）→ run-panel.vbs → node server.js → ui/index.html
+  server.js 只监听 127.0.0.1:8795；通过 PowerShell 读写计划任务，通过 wb-auth.js 发起授权
 ```
 
 任务动作之所以不是直接 `node.exe`，是因为 node 是控制台程序，用 `InteractiveToken` 身份运行必然弹黑窗。`wscript.exe` 是 GUI 子系统宿主，自身不创建控制台，再由它用隐藏窗口拉起 node，屏幕全程无反应。
@@ -28,13 +36,13 @@ Windows 计划任务 DailyCheckinOnNet（系统事件「网络已连接」→ �
 | `run-hidden.vbs` | 隐藏窗口启动器；启动前校验 `checkin.js` 与 node 是否存在，失败写 `[launcher]` 日志 | **必须保持纯 ASCII**，否则 VBS 按 ANSI 解析会出错；node 路径在运行时自动发现托管版本目录 |
 | `lib/trae.js` | 读 Trae 客户端登录态 → 解密 token → 调 claim 接口；内置 `9074` 限流退避重试 | 需要 aha 设备 ID |
 | `lib/workbuddy.js` | 多来源取 token → 调官方签到接口；按响应体 `code` 判幂等 | `10001` 被网关包成 HTTP 400 |
-| `lib/token-sources.js` | 扫描本机日志采集最新 JWT，并挑出有效期最长的一个 | 不写明文 token |
 | `lib/daily-state.js` | 当日签到状态的读写与判定（按本机本地日期，跨天自动重置） | 判定失败不落盘 |
 | `lib/net.js` | 网络判定与等待：识别网络类错误、用 HTTP 探针判断是否在线、在预算内轮询等联网 | 探针不看 ping/DNS 缓存 |
 | `lib/notify.js` | 通知决策与去重：成功汇总 / 失败与漏签告警 / 夜间静默档位 | 发送失败只写日志 |
 | `notify-toast.ps1` | 真正发 Windows Toast（Windows PowerShell 5.1 + WinRT，零依赖） | 由 node 以 windowsHide 拉起，不闪黑框 |
-| `capture-workbuddy-token.js` | Playwright 兜底抓取/刷新 WorkBuddy token | 默认无头；`--login` 才可见 |
-| `capture-trae-token.js` | Playwright 抓取 Trae 网页会话 token（兜底） | 主力仍是客户端 `storage.json` |
+| `wb-auth.js` | WorkBuddy 官方插件 OAuth 授权流：`login` / `refresh` / `ensure` / `status` | **零依赖**，只用内置 `fetch`；`ensure` 供 checkin.js 调用 |
+| `server.js` | 面板后端：状态汇总、触发签到、时段/自启/重试开关、授权代理 | 仅监听 `127.0.0.1:8795`；接口不返回明文凭证 |
+| `status.js` | 命令行状态查看（面板的 CLI 版本） | 零依赖 |
 | `register-task.ps1` | 注册/重建计划任务，把动作挂到 `run-hidden.vbs` | 必须保存为 **UTF-8 with BOM** |
 
 ## 关键设计决策
@@ -68,15 +76,17 @@ Windows 计划任务 DailyCheckinOnNet（系统事件「网络已连接」→ �
 - 跨天自动重置（按本机本地日期比较）；
 - 排障时需要强制重跑：`node checkin.js --force`。
 
-### 3. token 来源优先级
+### 3. 凭证来源
 
-WorkBuddy：
+WorkBuddy 只有**一个**来源：`config.json` 里的 `accessToken` / `refreshToken` / `uid`，由 `wb-auth.js` 写入。
 
-1. `config.json` 里的 `accessToken`（基线，约 55 天）；
-2. 本机日志自动采集（主力，扫描到最新 JWT）；
-3. `capture-workbuddy-token.js` 兜底刷新（无头浏览器）。
+上游曾尝试在本机自动取 token，三条路径在当前版本上均已证实无效，相关代码已移除：
 
-若剩余有效期不足 3 天，签到前会主动刷新一次（调用 `capture-workbuddy-token.js` 时**必须带 `--force`**：该脚本不带 `--force` 时只要"当前 token 还没过期"就直接退出说无需刷新，会让预刷新变成空转）；若签到失败且错误信息疑似 token 问题（`token` / `401` / `403` / `失效` / `过期`），会再刷新并重试一次。
+1. 离线解密 `workbuddy-desktop.info` —— 该字段是 `$wbEncrypted` 加密对象，解密依赖客户端内部构造的 AAD；
+2. 读明文 info 文件 —— 文件存在，但字段是加密的；
+3. 扫客户端日志找 JWT —— 网页端已改用 Keycloak，日志中没有明文 JWT。
+
+续期策略：本地记录 `refreshedAt`，超过 **20 小时**即调 `wb-auth.js ensure` 主动刷新一次（官方 access token 约 28 天有效，20 小时只是保守阈值，避免临期才动）；若签到失败且错误信息疑似凭证问题（`token` / `401` / `403` / `失效` / `过期`），会再刷新并重试一次。刷新时 `refreshToken` 会滚动更新，一并落盘。
 
 Trae 的 token 选取同样按 **`exp` 最大者**（客户端 `Trae CN/User/globalStorage/storage.json` 中 `iCubeAuthInfo://icube.cloudide`，解密后约 14 天有效、客户端自动刷新）优先于 `config.trae.manualToken` 与 `trae-token.json` 缓存 —— 但只在 `exp` 相同时才有这个顺序；一般无需人工干预。
 
@@ -93,9 +103,11 @@ Trae 的 token 选取同样按 **`exp` 最大者**（客户端 `Trae CN/User/glo
 
 任务层的 `RunOnlyIfNetworkAvailable` 只在**任务启动前**判定一次：Wi-Fi 连着但上游没网时任务照样启动，请求直接 `ENOTFOUND`，若就此收场就要等到下一个时段。为此加了三层：
 
-1. **运行内等待**：请求异常经 `lib/net.js` 判定为网络类（`ENOTFOUND/EAI_AGAIN/ECONNRESET/ETIMEDOUT/…`，含 `err.cause.code`）→ 本轮不结束，按预算轮询等联网，恢复后重试未完成的一端。预算 = `min(networkRetry.waitMs, CHECKIN_WATCHDOG_MS − 已耗时 − 6 分钟预留)`，保证不撞看门狗。等待期间每满 60 秒记一行进度，其余静默。断网时跳过 WorkBuddy 的浏览器抓 token（否则白等最多 6 分钟）。
+1. **运行内等待**：请求异常经 `lib/net.js` 判定为网络类（`ENOTFOUND/EAI_AGAIN/ECONNRESET/ETIMEDOUT/…`，含 `err.cause.code`）→ 本轮不结束，按预算轮询等联网，恢复后重试未完成的一端。预算 = `min(networkRetry.waitMs, CHECKIN_WATCHDOG_MS − 已耗时 − 6 分钟预留)`，保证不撞看门狗。等待期间每满 60 秒记一行进度，其余静默。断网时跳过 WorkBuddy 的凭证刷新（否则白等最多 6 分钟）。
 2. **联网事件补签**：任务 `DailyCheckinOnNet` 订阅 `Microsoft-Windows-NetworkProfile/Operational` 的 `10000`（网络已连接），`Delay=PT15S` 后以 `--quiet-skip` 启动。两端今日都完成 → 不写日志、不抢锁直接退出（网络一天可能重连很多次，不能刷屏）；有未完成端 → 正常走一遍流程。
-3. **后续时段**：00:01 / 09:00 / 13:00 / 17:00 / 21:00 照常触发；关机/睡眠错过的由 `StartWhenAvailable` 在恢复后补跑。
+3. **后续时段**：面板设定的各时段照常触发；关机/睡眠错过的由 `StartWhenAvailable` 在恢复后补跑。
+4. **登录补签**：`DailyCheckinOnLogon` 在用户登录 30 秒后补签。
+5. **间隔重试**：`DailyCheckinHourly` 每 N 小时重试，直到当天两端完成 —— 这是"电脑整段时间没开机"的最后一道兜底。
 
 判定在线用的是「对 `www.workbuddy.cn` / `api.trae.cn` 发 `HEAD` 能否拿到 HTTP 响应」（有响应即在线，4xx/5xx 也算），刻意不用 ping（常被防火墙挡）和纯 DNS（缓存会给出假阳性）。
 
@@ -126,9 +138,11 @@ Trae 的 token 选取同样按 **`exp` 最大者**（客户端 `Trae CN/User/glo
 | `checkin.log` | 运行日志（写控制台失败不影响落盘） |
 | `checkin.log.N` | 轮转存档（超过 `CHECKIN_LOG_MAX_BYTES`，默认 1 MiB 时生成） |
 | `config.json.tmp` | 抓取脚本原子写 config 的中间文件（写完即改名，正常不残留；**含明文 token**，已 gitignore） |
-| `capture.log` | 兜底抓取脚本的日志 |
-| `_wb_capture_state.json` | 抓取状态缓存 |
-| `.wb-browser-profile/` | Playwright 持久化 profile（含登录态，**不要分享**） |
+| `state/credits-history.json` | 积分历史（面板「累计积分」的数据源） |
+| `state/panel.json` | 面板设置（如重试间隔） |
+| `wb-auth.log` | WorkBuddy 授权与续期的日志 |
+| `panel-start.log` | 面板启动诊断（仅在启动失败时写入） |
+| `.wb-browser-profile/` | WorkBuddy Web 授权用到的浏览器 profile（**含会话，不要分享**） |
 | `config.json` / `trae-token.json` | 含 token，**不要分享** |
 
 ## 可调环境变量
@@ -159,4 +173,4 @@ Trae 的 token 选取同样按 **`exp` 最大者**（客户端 `Trae CN/User/glo
 - 签到接口为客户端私有接口，若官方调整字段或校验，需要同步修改 `lib/trae.js` / `lib/workbuddy.js`。
 - `run-hidden.vbs` 按「托管 Node 版本目录（名字最大者）→ `C:\Program Files\node` → PATH」顺序解析 node，托管 runtime 升级后无需改脚本。
 - `checkin.log` 采用简单的大小轮转（保留全部历史档案），没有按时间清理策略；按每天 1~3 行的实际量级，无需更复杂的方案。
-- `capture.log`（抓取脚本日志）不做轮转：只有在 token 需要刷新时才会写，量级可忽略。
+- 面板服务常驻后台（约 30MB 内存）。它不参与签到链路，关掉也不影响签到；下次双击 `ui.cmd` 会重新拉起。

@@ -10,7 +10,7 @@
 
 每天都要在 Trae CN 和 WorkBuddy 上各点一次「签到」才能领到免费积分，忘了就断签。这个工具把这件事变成后台自动完成：
 
-- **零运行时依赖** —— 签到逻辑只用 Node 内置模块（`crypto` / `fetch`），不需要 `npm install`
+- **零运行时依赖** —— 全部代码只用 Node 内置模块（`crypto` / `fetch` / `http`），**不需要 `npm install`**
 - **不碰你的密码** —— 只读本机客户端的登录态，或走官方授权流
 - **不伪造设备** —— 没有 MITM 代理、不装根证书、不改注册表、不伪造 `x-device-id`
 - **幂等** —— 当天签到成功后，后续所有触发都会静默跳过，不会重复领取
@@ -31,9 +31,11 @@
 ### 环境要求
 
 - Windows 10 / 11
-- **Node.js ≥ 18**（签到逻辑）；若要使用面板里的 WorkBuddy 授权，需 **≥ 20**
+- **Node.js ≥ 18**
 - 已安装并登录 **Trae CN 客户端**
 - 一个 WorkBuddy 账号
+
+> 没有 `npm install` 这一步 —— 项目零依赖。
 
 ### 1. 部署
 
@@ -102,14 +104,14 @@ powershell -ExecutionPolicy Bypass -File .\register-task.ps1
 ├── lib/
 │   ├── trae.js             Trae 凭证解密与签到
 │   ├── workbuddy.js        WorkBuddy 签到
-│   ├── token-sources.js    WorkBuddy 本机 token 采集（上游遗留，见下）
 │   ├── daily-state.js      当日状态（幂等跳过）
 │   ├── net.js              断网等待与探测
 │   └── notify.js           通知编排
 ├── assets/checkin.ico      图标
 └── docs/
-    ├── UPSTREAM-README.md  上游原始 README（保留备查）
-    └── architecture.md     架构说明
+    ├── PROVENANCE.md       来源与许可说明
+    ├── architecture.md     架构说明
+    └── images/panel.png    面板截图
 ```
 
 运行时产物（全部已在 `.gitignore` 中排除）：
@@ -171,9 +173,9 @@ POST https://www.workbuddy.cn/v2/billing/meter/daily-checkin
 Headers: Authorization: Bearer <token> / X-User-Id: <uid> / X-Domain: <domain>
 ```
 
-**为什么不用本机登录态？** 实测当前版本三条路都走不通：
+**为什么不能用本机登录态？** 实测当前版本三条路全部走不通：
 
-1. `workbuddy-desktop.info` 里的 `accessToken` 是 `$wbEncrypted` 加密对象，无法离线解密
+1. `workbuddy-desktop.info` 里的 `accessToken` 是 `$wbEncrypted` 加密对象，解密需要客户端内部构造的 AAD，无法稳定复现
 2. 网页端已改用 Keycloak，`localStorage` / cookie 中**不存在**明文 JWT
 3. 桌面客户端日志**不记录 token 明文**
 
@@ -183,20 +185,42 @@ Headers: Authorization: Bearer <token> / X-User-Id: <uid> / X-Domain: <domain>
 
 ## 本仓库相对上游的改动
 
-Fork 自 [xinshang777/auto-checkin](https://github.com/xinshang777/auto-checkin)。以下改动中**前 5 项是不修就跑不起来的硬伤**（均在当前版本实测复现）：
+Fork 自 [xinshang777/auto-checkin](https://github.com/xinshang777/auto-checkin)（来源与许可详见 [docs/PROVENANCE.md](docs/PROVENANCE.md)）。
+
+### 修复
+
+以下 5 项均为**当前版本实测复现的硬伤**，不修就跑不起来：
 
 | # | 位置 | 问题 | 修复 |
 | --- | --- | --- | --- |
-| 1 | `capture-workbuddy-token.js` | 把解不出 JSON 的「伪 JWT」也判为有效 token，于是抓到腾讯的 `KC_STATE_CHECKER` cookie，**没登录就报成功**并写入不可用凭证 | 要求载荷能解析为 JSON 且带 `exp` |
-| 2 | `capture-workbuddy-token.js` | 有头模式每 3 秒 `page.reload()`，**扫码/验证码流程被反复打断** | 登录模式不再刷新页面 |
-| 3 | `capture-workbuddy-token.js` | 登录窗口只等 5 分钟 | 延长至 30 分钟（`WB_LOGIN_WINDOW_MS` 可覆盖） |
-| 4 | `capture-workbuddy-token.js` | 强制下载 ~150MB Chromium | 复用系统 Edge（`channel: 'msedge'`） |
-| 5 | **新增 `wb-auth.js`** | 上游 WorkBuddy 凭证链路在当前版本已完全失效 | 实现官方 OAuth 设备授权流 + 自动刷新 |
-| 6 | `checkin.js` | 签到前的刷新调用的是失效的 capture 脚本 | 改调 `wb-auth.js ensure`，并以实际结果判断成败 |
-| 7 | `ui.cmd` | 用 `start /min wscript.exe //B …` 启动：cmd 的 `start` 会把 `//B` 当成自己的开关而报错，**wscript 从未启动** | 直接调用 `wscript.exe` |
-| 8 | `server.js` | 用 `ps(...).includes('ok')` 判断成败：PowerShell 报错后 `; 'ok'` 仍会执行，**永远返回成功**（导致开机自启静默失败） | 改为注册后回读计划任务实际状态 |
-| 9 | `server.js` | `-AtLogOn` 不指定 `-User` 时作用于「所有用户」，注册被拒（Access denied） | 显式绑定当前用户 |
-| 10 | **新增** | 缺少可视化界面、状态查看、开机补签、漏签重试 | `server.js` + `ui/` + `status.js` + `DailyCheckinHourly` |
+| 1 | WorkBuddy 凭证链路 | 上游依赖「本机存在明文 JWT」，而三条路全断（见上一节） | 新增 `wb-auth.js`：官方插件 OAuth 授权流 + 自动续期 |
+| 2 | `checkin.js` | 签到前的刷新调用的是已失效的抓取脚本 | 改调 `wb-auth.js ensure`，并以实际结果判断成败 |
+| 3 | `ui.cmd` | 用 `start /min wscript.exe //B …` 启动：cmd 的 `start` 会把 `//B` 当成自己的开关而报错，**wscript 从未被启动** | 直接调用 `wscript.exe` |
+| 4 | `server.js` | 用 `ps(...).includes('ok')` 判断成败：PowerShell 报错后 `; 'ok'` 仍会执行，**永远返回成功**（导致开机自启静默失败） | 改为注册后回读计划任务实际状态 |
+| 5 | `server.js` | `-AtLogOn` 不指定 `-User` 时作用于「所有用户」，注册被拒（Access denied） | 显式绑定当前用户 |
+
+### 新增
+
+| 内容 | 说明 |
+| --- | --- |
+| `wb-auth.js` | WorkBuddy 官方插件 OAuth 授权流 |
+| `server.js` + `ui/` | 本地 Web 面板 |
+| `status.js` / `status.cmd` | 命令行状态查看 |
+| `ui.cmd` / `run-panel.vbs` / `probe.ps1` | 面板启动链路 |
+| `DailyCheckinHourly` | 未签到时按间隔重试 |
+
+### 已移除的旧方案
+
+上游的 `capture-workbuddy-token.js` 曾用「浏览器登录一次并抓明文 JWT」的方式取 WorkBuddy 凭证。它在本仓库中**已整体删除**，原因是该思路在当前 WorkBuddy 版本上不成立；删除前它还有 4 个独立缺陷（一并记录，供参考）：
+
+1. 把解不出 JSON 的「伪 JWT」也判为有效 token —— 会抓到腾讯的 `KC_STATE_CHECKER` cookie，**没登录就报成功**，并写入一个用不了的凭证
+2. 有头登录模式下每 3 秒 `page.reload()` —— 扫码 / 验证码流程被反复打断，实际上无法完成登录
+3. 登录等待窗口只有 5 分钟
+4. 强制下载约 150MB 的 Chromium
+
+同时移除的还有：`capture-trae-token.js`（一次性兜底工具，实际未用）、`lib/token-sources.js`（仅被上述失效路径使用）、`CHANGELOG.md` / `CONTRIBUTING.md` / `.github/`（记录的是上游历史与协作规范）。
+
+**移除的直接收益：项目不再依赖 Playwright，Node 版本要求从 ≥20 降到 ≥18，仓库里没有一行死代码。**
 
 ---
 
@@ -209,6 +233,6 @@ Fork 自 [xinshang777/auto-checkin](https://github.com/xinshang777/auto-checkin)
 
 ## 致谢与许可
 
-- 签到核心逻辑与计划任务设计来自 [xinshang777/auto-checkin](https://github.com/xinshang777/auto-checkin)（上游**未声明开源许可证**，原始 README 见 [docs/UPSTREAM-README.md](docs/UPSTREAM-README.md)）。
-- WorkBuddy OAuth 授权流的端点与流程参考了 [cxqc168-wq/Trae-workbuddyAssistant](https://github.com/cxqc168-wq/Trae-workbuddyAssistant)（MIT）的 Rust 实现，本仓库以零依赖 Node 重新实现。
-- 本项目自身的改动以 MIT 许可发布，详见 [LICENSE](LICENSE)。
+- 签到核心逻辑与计划任务设计来自 [xinshang777/auto-checkin](https://github.com/xinshang777/auto-checkin)（上游**未声明开源许可证**）。
+- WorkBuddy OAuth 授权流参考了 [cxqc168-wq/Trae-workbuddyAssistant](https://github.com/cxqc168-wq/Trae-workbuddyAssistant)（MIT）的 Rust 实现。
+- 本项目自身的改动以 MIT 许可发布，详见 [LICENSE](LICENSE)；来源与许可边界见 [docs/PROVENANCE.md](docs/PROVENANCE.md)。

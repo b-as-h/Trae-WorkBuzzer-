@@ -17,8 +17,7 @@
  *   - 当日幂等：任一端签到成功即写入 state/daily-status.json 的当天记录，
  *     后续时段的触发会跳过该端；两端都完成则整轮直接退出（只留一行日志），
  *     不再每个时段重复走一遍签到流程；跨天自动重置
- *   - WorkBuddy：签到前若 token 无效/临近过期，自动调用 capture-workbuddy-token.js 刷新
- *     （无头浏览器，不弹窗口）
+ *   - WorkBuddy：凭证临期时自动调用 wb-auth.js 续期（纯 HTTP，无需浏览器）
  *   - Trae：自动从客户端 storage.json 提取 token（约 14 天有效、客户端自动刷新），
  *     内置 9074 限流重试 + 8 分钟总时限；已签到则直接跳过
  *   - 两端独立容错，互不影响：一端失败只重试该端，不会让另一端重复签到
@@ -32,7 +31,6 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 const { traeCheckin } = require('./lib/trae.js');
 const { workbuddyCheckin, decodeJwtPayload } = require('./lib/workbuddy.js');
-const { pickBestToken } = require('./lib/token-sources.js');
 const dailyState = require('./lib/daily-state.js');
 const net = require('./lib/net.js');
 const notify = require('./lib/notify.js');
@@ -40,9 +38,8 @@ const notify = require('./lib/notify.js');
 const ROOT = __dirname;
 const CONFIG_PATH = path.join(ROOT, 'config.json');
 const LOG_PATH = path.join(ROOT, 'checkin.log');
-// WorkBuddy 凭证：改用官方插件授权流（wb-auth.js）。原 capture-workbuddy-token.js
-// 依赖「网页端存在明文 JWT」，在当前 WorkBuddy 版本上已失效（详见 wb-auth.js 头部说明）。
-const CAPTURE_SCRIPT = path.join(ROOT, 'wb-auth.js');
+// WorkBuddy 凭证由 wb-auth.js（官方插件 OAuth 授权流）获取与续期，详见其头部说明。
+const AUTH_SCRIPT = path.join(ROOT, 'wb-auth.js');
 
 const ARGS = process.argv.slice(2);
 const FORCE = ARGS.includes('--force');
@@ -214,20 +211,19 @@ function needRefreshWorkbuddyToken(cfg) {
 }
 
 /**
- * 调 capture 刷新 token。
- * ⚠️ force=true 时必须带上 --force：capture 在不带 --force 时，只要「当前 token 还没过期」
- * 就直接 exit 0 说"无需刷新"。于是「剩余不足 3 天」「401 已失效」这两种本该刷新的场景
- * 都会被它挡掉，整条预刷新链路变成一次空转（2026-09-29 审查发现）。
+ * 调 wb-auth.js 续期 WorkBuddy 凭证。
+ * 新鲜度以本地 refreshedAt 判断（官方 access token 约 28 天有效），超过 20 小时即主动
+ * 刷新一次。参数 force 仅为兼容既有调用点而保留。
  */
 function tryRefreshWorkbuddyToken(force) {
-  if (!fs.existsSync(CAPTURE_SCRIPT)) {
+  if (!fs.existsSync(AUTH_SCRIPT)) {
     log('[WorkBuddy] 未找到 wb-auth.js，跳过自动刷新');
     return false;
   }
   log('[WorkBuddy] 凭证缺失/临期/已失效，尝试自动刷新...');
   try {
-    const captureArgs = [CAPTURE_SCRIPT, 'ensure'];
-    const r = spawnSync(process.execPath, captureArgs, {
+    const authArgs = [AUTH_SCRIPT, 'ensure'];
+    const r = spawnSync(process.execPath, authArgs, {
       cwd: ROOT,
       encoding: 'utf8',
       timeout: 6 * 60 * 1000,
