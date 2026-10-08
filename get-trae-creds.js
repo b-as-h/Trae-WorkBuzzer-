@@ -22,11 +22,13 @@
  * ⚠ 不要为了拿别的账号的凭证，把本机客户端换登成那个账号 ——
  *   本机客户端的登录态是「默认账号」的凭证来源，换登会把它顶掉。
  * ⚠ Cloud-IDE JWT 只有客户端登录时才会自动续期；约 14 天后需要重新提取一次。
+ * ⚠ 只从**你指定的这一份**文件里取值：文件里解不出 token 就直接报错退出，
+ *   绝不回落到本机登录态（那正是「拿错账号凭证」的事故源头）。
  */
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { extractCloudIdeToken, findStoragePath, findAhaDeviceId } = require('./lib/trae.js');
+const { decryptStorageValue, findStoragePath, findAhaDeviceId, jwtExp } = require('./lib/trae.js');
 
 const ARGS = process.argv.slice(2);
 const MASK = ARGS.includes('--mask');
@@ -51,38 +53,51 @@ function resolvePath() {
 
 const p = resolvePath();
 
-// 1) 设备 ID：storage.json 里形如 iCubeAuthInfo://icube-dc:<数字> 的键
-let deviceId = '';
-let hasClient = false;
+// 1) 读整份文件：设备 ID 与 token 都从它取（同源，缺一不可）
+let storage = null;
 try {
-  const storage = JSON.parse(fs.readFileSync(p, 'utf8').replace(/^\uFEFF/, ''));
-  deviceId = findAhaDeviceId(storage);
-  hasClient = Object.keys(storage).some((k) => k.startsWith('iCubeAuthInfo'));
+  storage = JSON.parse(fs.readFileSync(p, 'utf8').replace(/^\uFEFF/, ''));
 } catch (e) {
   die('storage.json 解析失败：' + e.message, 2);
 }
+const deviceId = findAhaDeviceId(storage);
+const hasClient = Object.keys(storage).some((k) => k.startsWith('iCubeAuthInfo'));
 
-// 2) token：解密 iCubeAuthInfo://icube.cloudide（复用 lib/trae.js 的实现）
-const info = extractCloudIdeToken({ cloudideStorage: p, storageJson: p });
-if (!info) {
+// 2) token：解密 iCubeAuthInfo://icube.cloudide（复用 lib/trae.js 的解密实现）
+//    刻意不走 extractCloudIdeToken —— 它在指定文件解不出时会继续尝试本机客户端路径，
+//    那会让「指向文件A、拿到文件B的凭证」静默发生，是本工具必须杜绝的错误。
+let token = '';
+for (const k of Object.keys(storage)) {
+  if (!k.startsWith('iCubeAuthInfo://icube.cloudide')) continue;
+  try {
+    const raw = storage[k];
+    let obj = null;
+    if (typeof raw === 'string' && raw.trim().startsWith('{')) obj = JSON.parse(raw);   // 明文
+    else if (typeof raw === 'string') obj = JSON.parse(decryptStorageValue(raw));        // 加密态解密
+    if (obj && typeof obj.token === 'string' && obj.token) { token = obj.token; break; }
+  } catch (_) { /* 该键解不开就试下一个候选键 */ }
+}
+if (!token) {
   die(hasClient
-    ? '未能从该文件解出 Cloud-IDE token —— 该文件里没有 icube.cloudide 键（可能不是登录态文件）。'
+    ? '该文件里没有可解出的 iCubeAuthInfo://icube.cloudide —— 它多半不是（或不是最新的）登录态文件。'
+      + '\n  指定文件解不出 token 时本工具不会回落到本机登录态（防止拿错账号凭证）。'
     : '该文件中没有 iCubeAuthInfo 相关键 —— 这多半不是 Trae 的 storage.json。', 1);
 }
+const exp = jwtExp(token);
+const expDays = exp ? (exp * 1000 - Date.now()) / 86400000 : null;
+const fp = crypto.createHash('sha1').update(token).digest('hex').slice(0, 12);
 
-const expDays = info.exp ? (info.exp * 1000 - Date.now()) / 86400000 : null;
-const fp = crypto.createHash('sha1').update(info.token).digest('hex').slice(0, 12);
 const out = [];
 out.push('');
 out.push('  Trae 凭证提取结果');
 out.push('  ' + '='.repeat(60));
 out.push('  storage.json : ' + p);
 out.push('  设备 ID      : ' + (deviceId || '(未找到 icube-dc 键)'));
-out.push('  token 过期   : ' + (info.exp ? new Date(info.exp * 1000).toLocaleString('zh-CN', { hour12: false })
+out.push('  token 过期   : ' + (exp ? new Date(exp * 1000).toLocaleString('zh-CN', { hour12: false })
   + '（剩 ' + (expDays != null ? expDays.toFixed(1) : '?') + ' 天）' : '(未知)'));
 out.push('  token 指纹   : ' + fp);
 out.push('  ' + '-'.repeat(60));
-out.push('  token        : ' + (MASK ? '（已用 --mask 隐藏；去掉 --mask 查看本体）' : info.token));
+out.push('  token        : ' + (MASK ? '（已用 --mask 隐藏；去掉 --mask 查看本体）' : token));
 out.push('  ' + '='.repeat(60));
 if (!deviceId) {
   out.push('  ⚠ 该文件没有设备 ID，只填 token 会因 x-device-id 不匹配被 9074 拦下；');

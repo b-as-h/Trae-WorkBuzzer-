@@ -120,6 +120,7 @@ powershell -ExecutionPolicy Bypass -File .\register-task.ps1
 node get-trae-creds.js                      # 本机客户端的 storage.json
 node get-trae-creds.js D:\copy\storage.json # 登录了该账号的机器上拷过来的 storage.json
 node get-trae-creds.js --mask               # 只看指纹，不打印 token 本体
+# 不想开命令行也可以直接双击 get-trae-creds.cmd（自动切到项目目录，跑完停住不闪退）
 ```
 
 输出的 token + 设备 ID 直接粘进面板该账号的「Trae 凭证」表单即可。三条注意：
