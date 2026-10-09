@@ -118,6 +118,14 @@ function creditsSummary(h, accountId) {
   const pick = (d, k) => {
     const day = h.days[d] || {};
     if (accountId) return Number((day.byAccount && day.byAccount[accountId] && day.byAccount[accountId][k]) || 0);
+    // 全局口径：有按账号拆分的日期按账号求和，否则回退 v1 的每日值。
+    // 取 max 是为了兼容「byAccount 只记录到部分账号」的历史数据（日志轮转后重解析可能缺项），
+    // 保证多账号的全局合计永远不会小于 v1 口径。
+    if (day.byAccount) {
+      const sum = Object.values(day.byAccount)
+        .reduce((a, x) => a + Number((x && x[k]) || 0), 0);
+      return Math.max(sum, Number(day[k] || 0));
+    }
     return Number(day[k] || 0);
   };
   const sum = (k) => days.reduce((a, d) => a + pick(d, k), 0);
