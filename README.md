@@ -1,8 +1,15 @@
 # Trae / WorkBuddy 签到助手
 
+[![最新版本](https://img.shields.io/github/v/release/b-as-h/Trae-WorkBuzzer-?label=%E5%AE%89%E8%A3%85%E5%8C%85)](https://github.com/b-as-h/Trae-WorkBuzzer-/releases)
+[![许可：MIT](https://img.shields.io/badge/%E8%AE%B8%E5%8F%AF-MIT-22c55e)](LICENSE)
+[![平台](https://img.shields.io/badge/%E5%B9%B3%E5%8F%B0-Windows%2010%2F11-0f766e)](#快速开始)
+[![零依赖](https://img.shields.io/badge/%E8%BF%90%E8%A1%8C%E6%97%B6-Node%20%E5%86%85%E7%BD%AE%E6%A8%A1%E5%9D%97%20%C2%B7%20%E6%97%A0%20npm%20install-16a34a)](#这是什么)
+
 > Windows 上为 **Trae CN** 与 **WorkBuddy** 自动领取每日免费积分，并附带一个本地 Web 面板。
 
 ![签到面板](docs/images/panel.png)
+
+**30 秒上手**：[下载安装包](https://github.com/b-as-h/Trae-WorkBuzzer-/releases/latest) → 双击安装并勾选「注册计划任务」→ 打开面板，为每个 WorkBuddy 账号点一次「授权」。之后每天自动签到，完成有通知、漏签必提醒 —— Trae 端**零配置**（自动读取本机客户端登录态）。
 
 ---
 
@@ -10,9 +17,12 @@
 
 每天都要在 Trae CN 和 WorkBuddy 上各点一次「签到」才能领到免费积分，忘了就断签。这个工具把这件事变成后台自动完成：
 
-- **零运行时依赖** —— 全部代码只用 Node 内置模块（`crypto` / `fetch` / `http`），**不需要 `npm install`**
-- **不碰你的密码** —— 只读本机客户端的登录态，或走官方授权流
+- **一键安装** —— Releases 下载安装包双击即用：自带 Node 运行时、免管理员、中文向导；也支持纯源码运行
+- **零依赖源码** —— 全部代码只用 Node 内置模块（`crypto` / `fetch` / `http`），**不需要 `npm install`**
+- **多账号 + 批量签到** —— 一个面板管理多个账号：独立授权、独立开关、独立积分统计，勾选后一键批量
+- **不碰你的密码** —— Trae 只读本机客户端登录态；WorkBuddy 走官方授权流（浏览器确认一次，之后自动续期）
 - **不伪造设备** —— 没有 MITM 代理、不装根证书、不改注册表、不伪造 `x-device-id`
+- **四层兜底 + 通知** —— 定时时段 → 断网补签 → 开机补签 → 每小时重试；成功每天一条汇总，失败与漏签必定提醒
 - **幂等** —— 以「账号 × 端」为单位：某账号的某一端当天签到成功后，后续所有触发都会静默跳过，不会重复领取
 
 ## 功能
@@ -327,50 +337,7 @@ Headers: Authorization: Bearer <token> / X-User-Id: <uid> / X-Domain: <domain>
 2. 网页端已改用 Keycloak，`localStorage` / cookie 中**不存在**明文 JWT
 3. 桌面客户端日志**不记录 token 明文**
 
-所以上游「扫日志找 JWT」与「读明文 info 文件」两条路径在当前版本上必然失败。本仓库改用官方授权流。
-
----
-
-## 本仓库相对上游的改动
-
-Fork 自 [xinshang777/auto-checkin](https://github.com/xinshang777/auto-checkin)（来源与许可详见 [docs/PROVENANCE.md](docs/PROVENANCE.md)）。
-
-> 本节记录的是 **v1（单账号）** 相对上游的改动。**多账号（v2）** 不在与上游对比的范围内：它是在本仓库 v1 基础上做的改造（`lib/accounts.js` + 「账号 × 端」任务模型），说明见上文「[多账号管理](#多账号管理)」与 [docs/architecture.md](docs/architecture.md) 的「多账号模型与不变量」。
-
-### 修复
-
-以下 5 项均为**当前版本实测复现的硬伤**，不修就跑不起来：
-
-| # | 位置 | 问题 | 修复 |
-| --- | --- | --- | --- |
-| 1 | WorkBuddy 凭证链路 | 上游依赖「本机存在明文 JWT」，而三条路全断（见上一节） | 新增 `wb-auth.js`：官方插件 OAuth 授权流 + 自动续期 |
-| 2 | `checkin.js` | 签到前的刷新调用的是已失效的抓取脚本 | 改调 `wb-auth.js ensure`，并以实际结果判断成败 |
-| 3 | `ui.cmd` | 用 `start /min wscript.exe //B …` 启动：cmd 的 `start` 会把 `//B` 当成自己的开关而报错，**wscript 从未被启动** | 直接调用 `wscript.exe` |
-| 4 | `server.js` | 用 `ps(...).includes('ok')` 判断成败：PowerShell 报错后 `; 'ok'` 仍会执行，**永远返回成功**（导致开机自启静默失败） | 改为注册后回读计划任务实际状态 |
-| 5 | `server.js` | `-AtLogOn` 不指定 `-User` 时作用于「所有用户」，注册被拒（Access denied） | 显式绑定当前用户 |
-
-### 新增
-
-| 内容 | 说明 |
-| --- | --- |
-| `wb-auth.js` | WorkBuddy 官方插件 OAuth 授权流 |
-| `server.js` + `ui/` | 本地 Web 面板 |
-| `status.js` / `status.cmd` | 命令行状态查看 |
-| `ui.cmd` / `run-panel.vbs` / `probe.ps1` | 面板启动链路 |
-| `DailyCheckinHourly` | 未签到时按间隔重试 |
-
-### 已移除的旧方案
-
-上游的 `capture-workbuddy-token.js` 曾用「浏览器登录一次并抓明文 JWT」的方式取 WorkBuddy 凭证。它在本仓库中**已整体删除**，原因是该思路在当前 WorkBuddy 版本上不成立；删除前它还有 4 个独立缺陷（一并记录，供参考）：
-
-1. 把解不出 JSON 的「伪 JWT」也判为有效 token —— 会抓到腾讯的 `KC_STATE_CHECKER` cookie，**没登录就报成功**，并写入一个用不了的凭证
-2. 有头登录模式下每 3 秒 `page.reload()` —— 扫码 / 验证码流程被反复打断，实际上无法完成登录
-3. 登录等待窗口只有 5 分钟
-4. 强制下载约 150MB 的 Chromium
-
-同时移除的还有：`capture-trae-token.js`（一次性兜底工具，实际未用）、`lib/token-sources.js`（仅被上述失效路径使用）、`CHANGELOG.md` / `CONTRIBUTING.md` / `.github/`（记录的是上游历史与协作规范）。
-
-**移除的直接收益：项目不再依赖 Playwright，Node 版本要求从 ≥20 降到 ≥18，仓库里没有一行死代码。**
+所以「扫日志找 JWT」与「读明文 info 文件」这两条看似顺手的路径在当前版本上必然失败。本项目直接改用官方授权流，一劳永逸。
 
 ---
 
@@ -391,9 +358,6 @@ powershell -ExecutionPolicy Bypass -File build\build.ps1
 ```
 
 构建过程会把程序文件与捆绑的 `runtime\node.exe` 暂存到 `build\app\`（**不包含**任何凭证与日志），再由 Inno Setup 编译。安装向导为中文（语言文件随仓库入库，编译不依赖网络）。
+## 许可
 
-## 致谢与许可
-
-- 签到核心逻辑与计划任务设计来自 [xinshang777/auto-checkin](https://github.com/xinshang777/auto-checkin)（上游**未声明开源许可证**）。
-- WorkBuddy OAuth 授权流参考了 [cxqc168-wq/Trae-workbuddyAssistant](https://github.com/cxqc168-wq/Trae-workbuddyAssistant)（MIT）的 Rust 实现。
-- 本项目自身的改动以 MIT 许可发布，详见 [LICENSE](LICENSE)；来源与许可边界见 [docs/PROVENANCE.md](docs/PROVENANCE.md)。
+本项目以 [MIT 许可](LICENSE) 发布，欢迎使用与改进。

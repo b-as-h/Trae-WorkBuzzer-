@@ -88,7 +88,7 @@ Windows 计划任务，共 4 个，全部挂到同一个入口：
 
 **凭证按账号存放**，都在 `config.json` 的 `accounts[]` 里；顶层 `workbuddy` 只是 v1 的遗留槽位，迁移后为空（`lib/accounts.js` 搬运凭证时会清空它）。
 
-WorkBuddy 只有**一个**来源：该账号的 `workbuddy.accessToken` / `refreshToken` / `uid` / `domain`，由 `wb-auth.js` 写入。上游曾尝试在本机自动取 token，三条路径在当前版本上均已证实无效，相关代码已移除：
+WorkBuddy 只有**一个**来源：该账号的 `workbuddy.accessToken` / `refreshToken` / `uid` / `domain`，由 `wb-auth.js` 写入。曾在本机尝试自动取 token 的三条路径，在当前版本上均已证实无效：
 
 1. 离线解密 `workbuddy-desktop.info` —— 该字段是 `$wbEncrypted` 加密对象，解密依赖客户端内部构造的 AAD；
 2. 读明文 info 文件 —— 文件存在，但字段是加密的；

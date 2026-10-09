@@ -17,7 +17,7 @@
 - `status.js` / `status.cmd` —— 命令行状态查看
 - `ui.cmd` / `run-panel.vbs` / `probe.ps1` —— 面板启动链路
 - `DailyCheckinHourly` 计划任务 —— 未签到时按间隔重试
-- 对上游代码的若干缺陷修复，逐条列在 README 的「相对上游的改动」一节
+- 对上游代码的若干缺陷修复（详细清单见 git 提交历史 `2d933cc`、`baf2656`）
 
 ## 已移除的上游文件
 
